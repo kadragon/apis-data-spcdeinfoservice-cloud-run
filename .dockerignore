@@ -1,0 +1,24 @@
+# node_modules는 로컬에서 필요하지만 Docker 이미지엔 필요 없음
+node_modules
+npm-debug.log
+yarn-error.log
+
+# OS 및 에디터 관련 불필요한 파일들
+.DS_Store
+*.swp
+*.swo
+*.tmp
+
+# Git 및 기타 버전 관리 시스템
+.git
+.gitignore
+
+# 환경 변수 파일은 절대 포함시키지 않기
+.env
+.env.*
+
+# 테스트/로컬 개발 관련 파일
+coverage
+__tests__/
+*.test.js
+*.spec.js

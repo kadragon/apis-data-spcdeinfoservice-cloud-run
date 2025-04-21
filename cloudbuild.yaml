@@ -28,7 +28,7 @@ steps:
       - "managed"
       - "--allow-unauthenticated"
       - "--update-secrets"
-      - "DATAGOKR_SERVICEKEY=datagokr-servicekey:latest"
+      - "DATAGOKR_SERVICEKEY=DATAGOKR_SERVICEKEY:latest,AUTH_API_KEY=AUTH_API_KEY:latest"
 
 images:
   - "gcr.io/workflow-knue/apis-data-spcdeinfoservice:$SHORT_SHA"

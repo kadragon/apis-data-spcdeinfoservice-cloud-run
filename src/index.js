@@ -1,5 +1,6 @@
 import express from "express";
 import fetch from "node-fetch";
+const AUTH_API_KEY = process.env.AUTH_API_KEY;
 
 const app = express();
 const BASE_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService";
@@ -7,6 +8,15 @@ const BASE_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoServi
 const allowedPaths = new Set(["/getRestDeInfo", "/getAnniversaryInfo", "/get24DivisionsInfo"]);
 
 app.use(async (req, res) => {
+  // 인증용 API 키 검증
+  const clientApiKey = req.header('x-api-key');
+  if (!clientApiKey || clientApiKey !== AUTH_API_KEY) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "Invalid or missing x-api-key header"
+    });
+  }
+
   const urlPath = req.path;
   if (!allowedPaths.has(urlPath)) {
     return res.status(404).send("Not Found");

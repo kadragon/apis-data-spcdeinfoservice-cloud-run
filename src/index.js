@@ -1,6 +1,16 @@
 import express from "express";
 import fetch from "node-fetch";
+import UserAgent from "user-agents";
+
+// 재사용 가능한 CORS 헤더 설정
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': '*',
+};
+
 const AUTH_API_KEY = process.env.AUTH_API_KEY;
+const DATAGOKR_SERVICEKEY = process.env.DATAGOKR_SERVICEKEY;
 
 const app = express();
 const BASE_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService";
@@ -8,6 +18,11 @@ const BASE_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoServi
 const allowedPaths = new Set(["/getRestDeInfo", "/getAnniversaryInfo", "/get24DivisionsInfo"]);
 
 app.use(async (req, res) => {
+  // CORS preflight handling
+  if (req.method === 'OPTIONS') {
+    return res.set(CORS_HEADERS).status(204).send();
+  }
+
   // 인증용 API 키 검증
   const clientApiKey = req.header('x-api-key');
   if (!clientApiKey || clientApiKey !== AUTH_API_KEY) {
@@ -17,48 +32,40 @@ app.use(async (req, res) => {
     });
   }
 
-  const urlPath = req.path;
-  if (!allowedPaths.has(urlPath)) {
-    return res.status(404).send("Not Found");
-  }
-
-  const datagokr_serviceKey = process.env.DATAGOKR_SERVICEKEY;
-  if (!datagokr_serviceKey) {
+  // 공공데이터 포털 서비스 키 존재 확인 
+  if (!DATAGOKR_SERVICEKEY) {
     return res.status(500).json({
       error: "Missing environment variable",
       message: "DATAGOKR_SERVICEKEY is not defined in the environment"
     });
   }
+  
+  // 요청 가능 주소 확인
+  const urlPath = req.path;
+  if (!allowedPaths.has(urlPath)) {
+    return res.status(404).send("Not Found");
+  }
 
+  // 쿼리에 서비스 키 추가
   const params = new URLSearchParams(req.query);
-  params.set("serviceKey", datagokr_serviceKey);
+  params.set("serviceKey", DATAGOKR_SERVICEKEY);
   const targetUrl = `${BASE_URL}${urlPath}?${params.toString()}`;
 
-  const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Safari/537.36"
-  ];
-  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+  // 임의 userAgent 생성
+  const randomUserAgent = new UserAgent().toString();
 
   try {
     const response = await fetch(targetUrl, {
       method: "GET",
       headers: {
-        'User-Agent': randomUserAgent,
+        'User-Agent': randomUserAgent
       },
       timeout: 2000,
     });
 
     res.set({
       'Content-Type': response.headers.get('content-type') || 'application/xml',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': '*',
-      'Host': 'www.ncs.go.kr',
-      'X-Forwarded-For': '',
-      'X-Forwarded-Host': '',
-      'X-Forwarded-Proto': '',
+      ...CORS_HEADERS,
     });
 
     response.body.pipe(res);

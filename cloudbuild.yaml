@@ -27,7 +27,7 @@ steps:
       - "--platform"
       - "managed"
       - "--allow-unauthenticated"
-      - "--update-secrets"
+      - "--set-secrets"
       - "DATAGOKR_SERVICEKEY=DATAGOKR_SERVICEKEY:latest,AUTH_API_KEY=AUTH_API_KEY:latest"
 
 images:

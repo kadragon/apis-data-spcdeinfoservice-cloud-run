@@ -12,7 +12,7 @@
   "dependencies": {
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
-    "user-agents": "^1.1.529"
+    "user-agents": "^1.1.536"
   },
   "type": "module"
 }

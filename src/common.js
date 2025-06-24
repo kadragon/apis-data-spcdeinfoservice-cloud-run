@@ -15,6 +15,15 @@ if (!DATAGOKR_SERVICEKEY) {
   process.exit(1);
 }
 
+/**
+ * Creates an Express middleware that proxies GET requests to a specified base URL, injecting an API service key and handling CORS.
+ *
+ * The middleware only processes requests whose path is included in the provided set of allowed paths. It appends the required service key as a query parameter, sets a randomized User-Agent header, and forwards the request to the target service. The response is relayed back to the client with appropriate content type and CORS headers. If the service key environment variable is missing or the fetch fails, it responds with a 500 error and a JSON error message.
+ *
+ * @param {string} baseUrl - The base URL to which requests are proxied.
+ * @param {Set<string>} allowedPaths - Set of request paths that are permitted to be proxied.
+ * @returns {Function} An Express middleware function for proxying requests.
+ */
 export function createService(baseUrl, allowedPaths) {
   return async function (req, res, next) {
     if (!allowedPaths.has(req.path)) {

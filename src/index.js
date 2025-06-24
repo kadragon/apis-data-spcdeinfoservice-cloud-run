@@ -35,8 +35,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(createSpcdeInfoService());
-app.use(createSecuritiesProductInfoService());
+app.use("/SpcdeInfoService", createSpcdeInfoService());
+app.use(
+  "/GetSecuritiesProductInfoService",
+  createSecuritiesProductInfoService()
+);
 
 app.use((req, res) => {
   res.status(404).send("Not Found");

@@ -10,7 +10,7 @@ export const CORS_HEADERS = {
 const DATAGOKR_SERVICEKEY = process.env.DATAGOKR_SERVICEKEY;
 if (!DATAGOKR_SERVICEKEY) {
   console.error(
-    "FATAL ERROR: DATAGOKR_SERVICEKEY is not defined in the environment."
+    "FATAL ERROR: DATAGOKR_SERVICEKEY is not defined in the environment.",
   );
   process.exit(1);
 }
@@ -25,7 +25,7 @@ if (!DATAGOKR_SERVICEKEY) {
  * @returns {Function} An Express middleware function for proxying requests.
  */
 export function createService(baseUrl, allowedPaths) {
-  return async function (req, res, next) {
+  return async (req, res, next) => {
     if (!allowedPaths.has(req.path)) {
       return next();
     }
@@ -40,7 +40,7 @@ export function createService(baseUrl, allowedPaths) {
       const response = await fetch(targetUrl, {
         method: "GET",
         headers: { "User-Agent": randomUserAgent },
-        timeout: 2000,
+        signal: AbortSignal.timeout(2000),
       });
 
       res.set({

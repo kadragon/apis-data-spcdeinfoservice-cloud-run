@@ -16,10 +16,11 @@ API proxy server that forwards requests to Korean public data APIs (data.go.kr),
 
 ## Architecture
 
-ES modules (`"type": "module"` in package.json). Express 5 server with two proxy routes:
+ES modules (`"type": "module"` in package.json). Express 5 server with three proxy routes:
 
 - `/SpcdeInfoService` — Korean special day info (holidays, anniversaries, 24 divisions)
 - `/GetSecuritiesProductInfoService` — Securities price info (ETF, ETN, ELW)
+- `/BidPublicInfoService` — Public bid/procurement info (construction, service, goods, etc.)
 
 **Key files:**
 

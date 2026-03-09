@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +18,9 @@
     "node-fetch": "^3.3.2",
     "user-agents": "^1.1.543"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "vitest": "^4.0.18"
+  }
 }

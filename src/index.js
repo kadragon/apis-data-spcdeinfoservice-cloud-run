@@ -1,8 +1,9 @@
+import crypto from "node:crypto";
 import express from "express";
 import { CORS_HEADERS } from "./common.js";
-import createSpcdeInfoService from "./services/spcdeInfoService.js";
+import createBidPublicInfoService from "./services/bidPublicInfoService.js";
 import createSecuritiesProductInfoService from "./services/getSecuritiesProductInfoService.js";
-import crypto from "crypto";
+import createSpcdeInfoService from "./services/spcdeInfoService.js";
 
 const AUTH_API_KEY = process.env.AUTH_API_KEY;
 if (!AUTH_API_KEY) {
@@ -35,13 +36,14 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/BidPublicInfoService", createBidPublicInfoService());
 app.use("/SpcdeInfoService", createSpcdeInfoService());
 app.use(
   "/GetSecuritiesProductInfoService",
-  createSecuritiesProductInfoService()
+  createSecuritiesProductInfoService(),
 );
 
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).send("Not Found");
 });
 

@@ -19,7 +19,11 @@ const { default: fetch } = await import("node-fetch");
 const { createService } = await import("./common.js");
 
 function createMockRes() {
-  const res = new PassThrough();
+  const res = new PassThrough() as PassThrough & {
+    set: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+    json: ReturnType<typeof vi.fn>;
+  };
   res.set = vi.fn();
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn();
@@ -28,14 +32,15 @@ function createMockRes() {
 
 describe("createService", () => {
   beforeEach(() => {
-    fetch.mockReset();
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
   it("proxies request for an allowed path with correct URL, headers, and streaming", async () => {
     const responseBody = new PassThrough();
-    fetch.mockResolvedValueOnce({
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       headers: {
-        get: (name) => (name === "content-type" ? "application/xml" : null),
+        get: (name: string) =>
+          name === "content-type" ? "application/xml" : null,
       },
       body: responseBody,
     });
@@ -53,12 +58,14 @@ describe("createService", () => {
     expect(next).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledOnce();
 
-    const calledUrl = fetch.mock.calls[0][0];
+    const calledUrl = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0];
     expect(calledUrl).toContain("https://api.example.com/getAllowed?");
     expect(calledUrl).toContain("numOfRows=10");
     expect(calledUrl).toContain("serviceKey=test-service-key");
 
-    const calledOptions = fetch.mock.calls[0][1];
+    const calledOptions = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][1];
     expect(calledOptions.method).toBe("GET");
     expect(calledOptions.headers["User-Agent"]).toBe("mock-user-agent");
 
@@ -88,7 +95,9 @@ describe("createService", () => {
 
   it("responds with 500 and timeout message on AbortError", async () => {
     const abortError = new DOMException("signal timed out", "AbortError");
-    fetch.mockRejectedValueOnce(abortError);
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      abortError,
+    );
 
     const middleware = createService(
       "https://api.example.com",
@@ -108,7 +117,9 @@ describe("createService", () => {
   });
 
   it("responds with 500 and service unavailable on generic fetch error", async () => {
-    fetch.mockRejectedValueOnce(new Error("network failure"));
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("network failure"),
+    );
 
     const middleware = createService(
       "https://api.example.com",

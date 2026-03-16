@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "build": "tsc",
+    "start": "bun dist/index.js",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "husky"
+    "prepare": "lefthook install"
   },
   "keywords": [],
   "author": "",
@@ -20,16 +21,13 @@
     "user-agents": "^1.1.543"
   },
   "type": "module",
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
-  },
-  "lint-staged": {
-    "*.{js,json}": "biome check --no-errors-on-unmatched"
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "@types/user-agents": "^1.0.4",
+    "lefthook": "^2.1.4",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }
 }

@@ -15,28 +15,28 @@
 
 ### 인프라 설정
 
-- [ ] typescript, @types/express, @types/node devDependencies 추가 및 설치
-- [ ] tsconfig.json 생성 (ESM, NodeNext, outDir: dist, strict)
-- [ ] package.json 수정 — start 스크립트를 `node dist/index.js`로, lint-staged glob을 `*.{ts,json}`으로 변경
-- [ ] vitest.config.js → vitest.config.ts 변환
-- [ ] biome.json에 TypeScript 포함 확인 (기본 지원이므로 변경 불필요할 수 있음)
+- [x] typescript, @types/express, @types/node devDependencies 추가 및 설치
+- [x] tsconfig.json 생성 (ESM, NodeNext, outDir: dist, strict)
+- [x] package.json 수정 — start 스크립트를 `node dist/index.js`로, lint-staged glob을 `*.{ts,json}`으로 변경
+- [x] vitest.config.js → vitest.config.ts 변환
+- [x] biome.json에 TypeScript 포함 확인 (기본 지원이므로 변경 불필요할 수 있음)
 
 ### 소스 파일 변환
 
-- [ ] src/common.js → src/common.ts (타입 추가: Request, Response, NextFunction, 반환 타입 명시)
-- [ ] src/services/spcdeInfoService.js → src/services/spcdeInfoService.ts
-- [ ] src/services/getSecuritiesProductInfoService.js → src/services/getSecuritiesProductInfoService.ts
-- [ ] src/services/bidPublicInfoService.js → src/services/bidPublicInfoService.ts
-- [ ] src/index.js → src/index.ts (import 경로에서 .js 확장자 조정)
+- [x] src/common.js → src/common.ts (타입 추가: Request, Response, NextFunction, 반환 타입 명시)
+- [x] src/services/spcdeInfoService.js → src/services/spcdeInfoService.ts
+- [x] src/services/getSecuritiesProductInfoService.js → src/services/getSecuritiesProductInfoService.ts
+- [x] src/services/bidPublicInfoService.js → src/services/bidPublicInfoService.ts
+- [x] src/index.js → src/index.ts (import 경로에서 .js 확장자 조정)
 
 ### 테스트 변환
 
-- [ ] src/services/bidPublicInfoService.test.js → src/services/bidPublicInfoService.test.ts (import 경로, mock 타입 조정)
+- [x] src/services/bidPublicInfoService.test.js → src/services/bidPublicInfoService.test.ts (import 경로, mock 타입 조정)
 
 ### 빌드 & 배포
 
-- [ ] Dockerfile 수정 — 빌드 스테이지 추가 (npm run build 후 dist/ 만 복사)
-- [ ] npm run build (tsc) 스크립트 추가 및 빌드 확인
-- [ ] 전체 테스트 통과 확인
-- [ ] 전체 lint 통과 확인
-- [ ] 기존 .js 소스 파일 삭제
+- [x] Dockerfile 수정 — 빌드 스테이지 추가 (npm run build 후 dist/ 만 복사)
+- [x] npm run build (tsc) 스크립트 추가 및 빌드 확인
+- [x] 전체 테스트 통과 확인
+- [x] 전체 lint 통과 확인
+- [x] 기존 .js 소스 파일 삭제

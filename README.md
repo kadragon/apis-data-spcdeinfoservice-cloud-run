@@ -46,9 +46,15 @@ All requests require an `x-api-key` header matching the configured `AUTH_API_KEY
 curl -H "x-api-key: YOUR_API_KEY" \
   "http://localhost:3000/SpcdeInfoService/getRestDeInfo?solYear=2026&solMonth=01"
 
+curl -H "x-api-key: YOUR_API_KEY" \
+  "http://localhost:3000/BidPublicInfoService/getBidPblancListInfoCnstwk?numOfRows=10&pageNo=1"
+
 # Docker (port 8080)
 curl -H "x-api-key: YOUR_API_KEY" \
   "http://localhost:8080/SpcdeInfoService/getRestDeInfo?solYear=2026&solMonth=01"
+
+curl -H "x-api-key: YOUR_API_KEY" \
+  "http://localhost:8080/BidPublicInfoService/getBidPblancListInfoCnstwk?numOfRows=10&pageNo=1"
 ```
 
 Preflight `OPTIONS` requests are handled automatically (CORS).

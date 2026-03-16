@@ -1,12 +1,13 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "apis-data-spcdeinfoservice",
       "dependencies": {
         "express": "^5.2.1",
         "node-fetch": "^3.3.2",
-        "user-agents": "^1.1.543",
+        "user-agents": "^2.1.1",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.4.6",
@@ -298,8 +299,6 @@
 
     "lefthook-windows-x64": ["lefthook-windows-x64@2.1.4", "", { "os": "win32", "cpu": "x64" }, "sha512-eE68LwnogxwcPgGsbVGPGxmghyMGmU9SdGwcc+uhGnUxPz1jL89oECMWJNc36zjVK24umNeDAzB5KA3lw1MuWw=="],
 
-    "lodash.clonedeep": ["lodash.clonedeep@4.5.0", "", {}, "sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ=="],
-
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
@@ -400,7 +399,7 @@
 
     "unpipe": ["unpipe@1.0.0", "", {}, "sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ=="],
 
-    "user-agents": ["user-agents@1.1.543", "", { "dependencies": { "lodash.clonedeep": "^4.5.0" } }, "sha512-nN0OCwyiIGr+cugLT4aGXsOdDy166kP645kvN/6fz5w/PBZEk9Rac/xiAH05GhmkVrb4IaQ3CuQq/kkfnWpQGg=="],
+    "user-agents": ["user-agents@2.1.1", "", {}, "sha512-EENWOfb5RgVyJdMIplNHCRJEKg/PKAjwAK2M3l/J3CwMSIhuL+Y3aADgHSG3qqy7QOqb4lY8vY2X9wnwF3vpUw=="],
 
     "vary": ["vary@1.1.2", "", {}, "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg=="],
 

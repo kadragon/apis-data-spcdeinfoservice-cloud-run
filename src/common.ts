@@ -54,10 +54,13 @@ export function createService(
         ...CORS_HEADERS,
       });
 
-      const stream = response.body?.pipe(res);
-      stream?.on("error", (err: Error) => {
+      if (!response.body) {
+        res.end();
+        return;
+      }
+
+      response.body.pipe(res).on("error", (err: Error) => {
         console.error("Pipe Error:", err);
-        // End response on pipe error to avoid hanging
         if (!res.headersSent) {
           res.status(500).end();
         } else {

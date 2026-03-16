@@ -8,15 +8,16 @@ API proxy server that forwards requests to Korean public data APIs (data.go.kr),
 
 ## Commands
 
-- **Start server:** `npm start`
-- **Lint:** `npm run lint` (Biome — linting + formatting)
-- **Lint fix:** `npm run lint:fix`
-- **Test:** `npm test` (Vitest)
-- **Test watch:** `npm run test:watch`
+- **Build:** `bun run build` (TypeScript compilation via tsc)
+- **Start server:** `bun run start`
+- **Lint:** `bun run lint` (Biome — linting + formatting)
+- **Lint fix:** `bun run lint:fix`
+- **Test:** `bun run test` (Vitest)
+- **Test watch:** `bun run test:watch`
 
 ## Architecture
 
-ES modules (`"type": "module"` in package.json). Express 5 server with three proxy routes:
+TypeScript with ES modules (`"type": "module"` in package.json). Express 5 server with three proxy routes:
 
 - `/SpcdeInfoService` — Korean special day info (holidays, anniversaries, 24 divisions)
 - `/GetSecuritiesProductInfoService` — Securities price info (ETF, ETN, ELW)
@@ -24,11 +25,11 @@ ES modules (`"type": "module"` in package.json). Express 5 server with three pro
 
 **Key files:**
 
-- `src/index.js` — Express app setup, API key auth middleware (`x-api-key` header, constant-time comparison), route mounting
-- `src/common.js` — `createService(baseUrl, allowedPaths)` factory that creates proxy middleware: validates path against allowlist, appends `DATAGOKR_SERVICEKEY`, randomizes User-Agent, streams response back
-- `src/services/*.js` — Each service defines its base URL and allowed endpoint paths, then calls `createService`
+- `src/index.ts` — Express app setup, API key auth middleware (`x-api-key` header, constant-time comparison), route mounting
+- `src/common.ts` — `createService(baseUrl, allowedPaths)` factory that creates proxy middleware: validates path against allowlist, appends `DATAGOKR_SERVICEKEY`, randomizes User-Agent, streams response back
+- `src/services/*.ts` — Each service defines its base URL and allowed endpoint paths, then calls `createService`
 
-**Adding a new proxied API:** Create a new file in `src/services/` following the existing pattern (define baseUrl + allowedPaths, export a function calling `createService`), then mount it in `index.js`.
+**Adding a new proxied API:** Create a new file in `src/services/` following the existing pattern (define baseUrl + allowedPaths, export a function calling `createService`), then mount it in `index.ts`.
 
 ## Environment Variables
 
@@ -40,4 +41,4 @@ Both secrets are managed via Google Secret Manager (see `cloudbuild.yaml`).
 
 ## Deployment
 
-Cloud Build (`cloudbuild.yaml`): builds Docker image, pushes to GCR, deploys to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.
+Cloud Build (`cloudbuild.yaml`): builds Docker image (multi-stage: TypeScript compilation then production), pushes to GCR, deploys to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.

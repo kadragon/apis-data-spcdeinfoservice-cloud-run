@@ -20,32 +20,36 @@ vi.mock("user-agents", () => ({
   },
 }));
 
-const { default: createSpcdeInfoService } = await import(
-  "./spcdeInfoService.js"
+const { default: createSecuritiesProductInfoService } = await import(
+  "./getSecuritiesProductInfoService.js"
 );
 
 const ALLOWED_PATHS = [
-  "/getRestDeInfo",
-  "/getAnniversaryInfo",
-  "/get24DivisionsInfo",
+  "/getETFPriceInfo",
+  "/getETNPriceInfo",
+  "/getELWPriceInfo",
 ];
 
 function createMockRes() {
-  const res = new PassThrough();
+  const res = new PassThrough() as PassThrough & {
+    set: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+    json: ReturnType<typeof vi.fn>;
+  };
   res.set = vi.fn();
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn();
   return res;
 }
 
-describe("createSpcdeInfoService", () => {
+describe("createSecuritiesProductInfoService", () => {
   it("returns a middleware function", () => {
-    const middleware = createSpcdeInfoService();
+    const middleware = createSecuritiesProductInfoService();
     expect(typeof middleware).toBe("function");
   });
 
   it("calls next for disallowed paths", async () => {
-    const middleware = createSpcdeInfoService();
+    const middleware = createSecuritiesProductInfoService();
     const next = vi.fn();
 
     await middleware({ path: "/notAllowed", query: {} }, createMockRes(), next);
@@ -53,7 +57,7 @@ describe("createSpcdeInfoService", () => {
   });
 
   it("does not call next for allowed paths", async () => {
-    const middleware = createSpcdeInfoService();
+    const middleware = createSecuritiesProductInfoService();
     const next = vi.fn();
 
     for (const path of ALLOWED_PATHS) {

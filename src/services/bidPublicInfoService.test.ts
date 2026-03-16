@@ -53,7 +53,11 @@ const ALLOWED_PATHS = [
 ];
 
 function createMockRes() {
-  const res = new PassThrough();
+  const res = new PassThrough() as PassThrough & {
+    set: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+    json: ReturnType<typeof vi.fn>;
+  };
   res.set = vi.fn();
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn();

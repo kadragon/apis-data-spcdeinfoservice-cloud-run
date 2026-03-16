@@ -1,7 +1,8 @@
+import type { NextFunction, Request, Response } from "express";
 import fetch from "node-fetch";
 import UserAgent from "user-agents";
 
-export const CORS_HEADERS = {
+export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "*",
@@ -24,14 +25,18 @@ if (!DATAGOKR_SERVICEKEY) {
  * @param {Set<string>} allowedPaths - Set of request paths that are permitted to be proxied.
  * @returns {Function} An Express middleware function for proxying requests.
  */
-export function createService(baseUrl, allowedPaths) {
-  return async (req, res, next) => {
+export function createService(
+  baseUrl: string,
+  allowedPaths: Set<string>,
+): (req: Request, res: Response, next: NextFunction) => Promise<void> {
+  return async (req: Request, res: Response, next: NextFunction) => {
     if (!allowedPaths.has(req.path)) {
-      return next();
+      next();
+      return;
     }
 
-    const params = new URLSearchParams(req.query);
-    params.set("serviceKey", DATAGOKR_SERVICEKEY);
+    const params = new URLSearchParams(req.query as Record<string, string>);
+    params.set("serviceKey", DATAGOKR_SERVICEKEY as string);
     const targetUrl = `${baseUrl}${req.path}?${params.toString()}`;
 
     const randomUserAgent = new UserAgent().toString();
@@ -49,8 +54,8 @@ export function createService(baseUrl, allowedPaths) {
         ...CORS_HEADERS,
       });
 
-      const stream = response.body.pipe(res);
-      stream.on("error", (err) => {
+      const stream = response.body?.pipe(res);
+      stream?.on("error", (err: Error) => {
         console.error("Pipe Error:", err);
         // End response on pipe error to avoid hanging
         if (!res.headersSent) {
@@ -62,7 +67,7 @@ export function createService(baseUrl, allowedPaths) {
     } catch (e) {
       // Log detailed error internally
       console.error("Fetch Error:", e);
-      const isTimeoutError = e.name === "AbortError";
+      const isTimeoutError = (e as Error).name === "AbortError";
       res.status(500).json({
         error: isTimeoutError ? "Request Timeout" : "Service Unavailable",
         message: isTimeoutError

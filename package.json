@@ -20,7 +20,7 @@
   },
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "vitest": "^4.0.18"
   }
 }

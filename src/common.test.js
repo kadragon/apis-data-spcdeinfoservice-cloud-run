@@ -1,8 +1,7 @@
 import { PassThrough } from "node:stream";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-process.env.DATAGOKR_SERVICEKEY =
-  process.env.DATAGOKR_SERVICEKEY || "test-service-key";
+process.env.DATAGOKR_SERVICEKEY = "test-service-key";
 
 vi.mock("node-fetch", () => ({
   default: vi.fn(),
@@ -28,6 +27,10 @@ function createMockRes() {
 }
 
 describe("createService", () => {
+  beforeEach(() => {
+    fetch.mockReset();
+  });
+
   it("proxies request for an allowed path with correct URL, headers, and streaming", async () => {
     const responseBody = new PassThrough();
     fetch.mockResolvedValueOnce({
@@ -68,7 +71,6 @@ describe("createService", () => {
   });
 
   it("calls next() and does not fetch for disallowed paths", async () => {
-    fetch.mockClear();
     const middleware = createService(
       "https://api.example.com",
       new Set(["/allowed"]),

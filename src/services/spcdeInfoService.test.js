@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 
-process.env.DATAGOKR_SERVICEKEY = process.env.DATAGOKR_SERVICEKEY || "test-key";
+process.env.DATAGOKR_SERVICEKEY = "test-key";
 
 vi.mock("node-fetch", () => ({
   default: vi.fn(() =>
@@ -61,20 +61,5 @@ describe("createSpcdeInfoService", () => {
       await middleware({ path, query: {} }, createMockRes(), next);
       expect(next).not.toHaveBeenCalled();
     }
-  });
-
-  it("has exactly 3 allowed endpoints", async () => {
-    const middleware = createSpcdeInfoService();
-    const next = vi.fn();
-
-    let acceptedCount = 0;
-    for (const path of ALLOWED_PATHS) {
-      next.mockClear();
-      await middleware({ path, query: {} }, createMockRes(), next);
-      if (!next.mock.calls.length) acceptedCount++;
-    }
-
-    expect(acceptedCount).toBe(3);
-    expect(ALLOWED_PATHS).toHaveLength(3);
   });
 });

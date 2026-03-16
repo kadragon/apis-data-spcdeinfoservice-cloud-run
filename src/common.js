@@ -40,7 +40,7 @@ export function createService(baseUrl, allowedPaths) {
       const response = await fetch(targetUrl, {
         method: "GET",
         headers: { "User-Agent": randomUserAgent },
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(10000),
       });
 
       res.set({

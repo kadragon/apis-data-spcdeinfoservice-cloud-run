@@ -22,7 +22,7 @@
   },
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "@types/user-agents": "^1.0.4",

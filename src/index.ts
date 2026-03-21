@@ -58,9 +58,17 @@ const server = app.listen(PORT, () => {
 
 function shutdown() {
   console.log("Shutting down gracefully...");
-  server.close(() => {
+  server.close((err) => {
+    if (err) {
+      console.error("Error shutting down server:", err);
+      process.exit(1);
+    }
     process.exit(0);
   });
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 5000).unref();
 }
 
 process.on("SIGTERM", shutdown);

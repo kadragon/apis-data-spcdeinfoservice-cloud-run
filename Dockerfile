@@ -21,4 +21,5 @@ COPY --from=builder /app/dist/ dist/
 ENV PORT=8080
 EXPOSE 8080
 
+USER bun
 CMD ["bun", "run", "start"]

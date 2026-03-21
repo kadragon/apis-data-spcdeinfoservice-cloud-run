@@ -3,14 +3,24 @@ import { describe, expect, it, vi } from "vitest";
 
 process.env.DATAGOKR_SERVICEKEY = "test-key";
 
-vi.mock("node-fetch", () => ({
-  default: vi.fn(() =>
-    Promise.resolve({
-      headers: { get: () => "application/xml" },
-      body: new PassThrough(),
-    }),
-  ),
-}));
+globalThis.fetch = vi.fn(() =>
+  Promise.resolve({
+    status: 200,
+    headers: { get: () => "application/xml" },
+    body: new PassThrough(),
+  }),
+) as unknown as typeof fetch;
+
+vi.mock("node:stream", async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import("node:stream");
+  return {
+    ...actual,
+    Readable: {
+      ...actual.Readable,
+      fromWeb: (stream: unknown) => stream,
+    },
+  };
+});
 
 vi.mock("user-agents", () => ({
   default: class {

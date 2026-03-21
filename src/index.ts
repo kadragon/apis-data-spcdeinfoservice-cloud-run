@@ -13,6 +13,10 @@ if (!AUTH_API_KEY) {
 
 const app = express();
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     return res.set(CORS_HEADERS).status(204).send();
@@ -44,10 +48,28 @@ app.use(
 );
 
 app.use((_req, res) => {
-  res.status(404).send("Not Found");
+  res.status(404).json({ error: "Not Found" });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Proxy server running on port ${PORT}`);
 });
+
+function shutdown() {
+  console.log("Shutting down gracefully...");
+  server.close((err) => {
+    if (err) {
+      console.error("Error shutting down server:", err);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 5000).unref();
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

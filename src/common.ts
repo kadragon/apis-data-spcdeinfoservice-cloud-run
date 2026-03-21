@@ -1,11 +1,11 @@
+import { Readable } from "node:stream";
 import type { NextFunction, Request, Response } from "express";
-import fetch from "node-fetch";
 import UserAgent from "user-agents";
 
 export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Headers": "x-api-key, Content-Type",
 };
 
 const DATAGOKR_SERVICEKEY = process.env.DATAGOKR_SERVICEKEY;
@@ -48,7 +48,7 @@ export function createService(
         signal: AbortSignal.timeout(10000),
       });
 
-      res.set({
+      res.status(response.status).set({
         "Content-Type":
           response.headers.get("content-type") || "application/xml",
         ...CORS_HEADERS,
@@ -59,14 +59,17 @@ export function createService(
         return;
       }
 
-      response.body.pipe(res).on("error", (err: Error) => {
-        console.error("Pipe Error:", err);
-        if (!res.headersSent) {
-          res.status(500).end();
-        } else {
-          res.end();
-        }
-      });
+      // @ts-expect-error: ReadableStream type mismatch between Web API and Node.js
+      Readable.fromWeb(response.body)
+        .pipe(res)
+        .on("error", (err: Error) => {
+          console.error("Pipe Error:", err);
+          if (!res.headersSent) {
+            res.status(500).end();
+          } else {
+            res.end();
+          }
+        });
     } catch (e) {
       // Log detailed error internally
       console.error("Fetch Error:", e);

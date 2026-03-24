@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 
-process.env.DATAGOKR_SERVICEKEY = "test-key";
+process.env.DATAGOKR_SERVICEKEY = process.env.DATAGOKR_SERVICEKEY || "test-key";
 
 globalThis.fetch = vi.fn(() =>
   Promise.resolve({
@@ -70,9 +70,10 @@ describe("createKorService", () => {
 
   it("calls next for disallowed paths", async () => {
     const middleware = createKorService();
+    const req = { path: "/notAllowed", query: {} };
     const next = vi.fn();
 
-    await middleware({ path: "/notAllowed", query: {} }, createMockRes(), next);
+    await middleware(req, createMockRes(), next);
     expect(next).toHaveBeenCalledOnce();
   });
 
@@ -82,8 +83,25 @@ describe("createKorService", () => {
 
     for (const path of ALLOWED_PATHS) {
       next.mockClear();
-      await middleware({ path, query: {} }, createMockRes(), next);
+      const req = { path, query: {} };
+      await middleware(req, createMockRes(), next);
       expect(next).not.toHaveBeenCalled();
     }
+  });
+
+  it("has exactly 15 allowed endpoints", async () => {
+    const middleware = createKorService();
+    const next = vi.fn();
+
+    let acceptedCount = 0;
+    for (const path of ALLOWED_PATHS) {
+      next.mockClear();
+      const req = { path, query: {} };
+      await middleware(req, createMockRes(), next);
+      if (!next.mock.calls.length) acceptedCount++;
+    }
+
+    expect(acceptedCount).toBe(15);
+    expect(ALLOWED_PATHS).toHaveLength(15);
   });
 });

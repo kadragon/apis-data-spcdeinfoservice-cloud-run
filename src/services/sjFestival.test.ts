@@ -70,4 +70,28 @@ describe("createSjFestival", () => {
       expect(next).not.toHaveBeenCalled();
     }
   });
+
+  it("proxies request with correct URL and serviceKey", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
+    const middleware = createSjFestival();
+    const res = createMockRes();
+    const next = vi.fn();
+
+    await middleware(
+      { path: "/sj_00000360", query: { pageIndex: "1" } },
+      res,
+      next,
+    );
+
+    expect(next).not.toHaveBeenCalled();
+    expect(globalThis.fetch).toHaveBeenCalledOnce();
+    const [fetchUrl] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    const targetUrl = new URL(fetchUrl);
+    expect(targetUrl.origin + targetUrl.pathname).toBe(
+      "https://apis.data.go.kr/5690000/sjFestival/sj_00000360",
+    );
+    expect(targetUrl.searchParams.get("pageIndex")).toBe("1");
+    expect(targetUrl.searchParams.get("serviceKey")).toBe("test-key");
+  });
 });

@@ -1,8 +1,8 @@
 import { createService } from "../common.js";
 
 /**
- * Creates a service client for the Sejong Festival API with access restricted to specific endpoints.
- * @return {object} A configured service client for the sjFestival API.
+ * Creates an Express middleware for proxying requests to the Sejong Festival API.
+ * Access is restricted to a specific set of endpoints.
  */
 export default function createSjFestival() {
   const baseUrl = "https://apis.data.go.kr/5690000/sjFestival";

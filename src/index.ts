@@ -5,6 +5,7 @@ import createBidPublicInfoService from "./services/bidPublicInfoService.js";
 import createSecuritiesProductInfoService from "./services/getSecuritiesProductInfoService.js";
 import createKorService from "./services/korService.js";
 import createPubDataOpnStdService from "./services/pubDataOpnStdService.js";
+import createSjFestival from "./services/sjFestival.js";
 import createSpcdeInfoService from "./services/spcdeInfoService.js";
 
 const AUTH_API_KEY = process.env.AUTH_API_KEY;
@@ -45,6 +46,7 @@ app.use((req, res, next) => {
 app.use("/BidPublicInfoService", createBidPublicInfoService());
 app.use("/KorService2", createKorService());
 app.use("/PubDataOpnStdService", createPubDataOpnStdService());
+app.use("/sjFestival", createSjFestival());
 app.use("/SpcdeInfoService", createSpcdeInfoService());
 app.use(
   "/GetSecuritiesProductInfoService",

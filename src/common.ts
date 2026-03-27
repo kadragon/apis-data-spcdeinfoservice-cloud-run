@@ -2,6 +2,67 @@ import { Readable } from "node:stream";
 import type { NextFunction, Request, Response } from "express";
 import UserAgent from "user-agents";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+class UpstreamError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+    public readonly isTimeout: boolean,
+  ) {
+    super(message);
+    this.name = "UpstreamError";
+  }
+}
+
+const MAX_RETRIES = 2;
+const TIMEOUT_MS = 10_000;
+const BACKOFF_BASE_MS = 1_000;
+
+async function fetchWithRetry(
+  url: string,
+  headers: Record<string, string>,
+): Promise<globalThis.Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+
+      if (response.status < 500) {
+        return response;
+      }
+
+      await response.arrayBuffer();
+      lastError = new UpstreamError(
+        `Upstream returned ${response.status}`,
+        502,
+        false,
+      );
+    } catch (e) {
+      const isTimeout = e instanceof Error && e.name === "AbortError";
+      const message = e instanceof Error ? e.message : String(e);
+      lastError = new UpstreamError(
+        isTimeout ? "Request timed out" : message,
+        isTimeout ? 504 : 502,
+        isTimeout,
+      );
+    }
+
+    if (attempt < MAX_RETRIES) {
+      await sleep(BACKOFF_BASE_MS * 2 ** attempt);
+    }
+  }
+
+  throw lastError;
+}
+
 export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -42,25 +103,23 @@ export function createService(
     const randomUserAgent = new UserAgent().toString();
 
     try {
-      const response = await fetch(targetUrl, {
-        method: "GET",
-        headers: { "User-Agent": randomUserAgent },
-        signal: AbortSignal.timeout(10000),
+      const upstream = await fetchWithRetry(targetUrl, {
+        "User-Agent": randomUserAgent,
       });
 
-      res.status(response.status).set({
+      res.status(upstream.status).set({
         "Content-Type":
-          response.headers.get("content-type") || "application/xml",
+          upstream.headers.get("content-type") || "application/xml",
         ...CORS_HEADERS,
       });
 
-      if (!response.body) {
+      if (!upstream.body) {
         res.end();
         return;
       }
 
       // @ts-expect-error: ReadableStream type mismatch between Web API and Node.js
-      Readable.fromWeb(response.body)
+      Readable.fromWeb(upstream.body)
         .pipe(res)
         .on("error", (err: Error) => {
           console.error("Pipe Error:", err);
@@ -71,15 +130,21 @@ export function createService(
           }
         });
     } catch (e) {
-      // Log detailed error internally
       console.error("Fetch Error:", e);
-      const isTimeoutError = (e as Error).name === "AbortError";
-      res.status(500).json({
-        error: isTimeoutError ? "Request Timeout" : "Service Unavailable",
-        message: isTimeoutError
-          ? "Request timed out"
-          : "Unable to process request",
-      });
+      res.set(CORS_HEADERS);
+      if (e instanceof UpstreamError) {
+        res.status(e.statusCode).json({
+          error: e.isTimeout ? "Gateway Timeout" : "Bad Gateway",
+          message: e.isTimeout
+            ? "Request timed out"
+            : "Unable to process request",
+        });
+      } else {
+        res.status(502).json({
+          error: "Bad Gateway",
+          message: "Unable to process request",
+        });
+      }
     }
   };
 }

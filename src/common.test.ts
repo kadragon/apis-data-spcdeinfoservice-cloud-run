@@ -1,5 +1,5 @@
 import { PassThrough } from "node:stream";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 process.env.DATAGOKR_SERVICEKEY = "test-service-key";
 
@@ -41,7 +41,12 @@ function createMockRes() {
 
 describe("createService", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("proxies request for an allowed path with correct URL, headers, and streaming", async () => {
@@ -101,9 +106,9 @@ describe("createService", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("responds with 500 and timeout message on AbortError", async () => {
+  it("responds with 504 and timeout message after all retries exhausted on AbortError", async () => {
     const abortError = new DOMException("signal timed out", "AbortError");
-    fetchMock.mockRejectedValueOnce(abortError);
+    fetchMock.mockRejectedValue(abortError);
 
     const middleware = createService(
       "https://api.example.com",
@@ -113,17 +118,92 @@ describe("createService", () => {
     const res = createMockRes();
     const next = vi.fn();
 
-    await middleware(req, res, next);
+    const promise = middleware(req, res, next);
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await promise;
 
-    expect(res.status).toHaveBeenCalledWith(500);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(res.set).toHaveBeenCalledWith(
+      expect.objectContaining({ "Access-Control-Allow-Origin": "*" }),
+    );
+    expect(res.status).toHaveBeenCalledWith(504);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Request Timeout",
+      error: "Gateway Timeout",
       message: "Request timed out",
     });
   });
 
-  it("responds with 500 and service unavailable on generic fetch error", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("network failure"));
+  it("responds with 502 and bad gateway on generic fetch error after all retries", async () => {
+    fetchMock.mockRejectedValue(new Error("network failure"));
+
+    const middleware = createService(
+      "https://api.example.com",
+      new Set(["/path"]),
+    );
+    const req = { path: "/path", query: {} };
+    const res = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, res, next);
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(res.set).toHaveBeenCalledWith(
+      expect.objectContaining({ "Access-Control-Allow-Origin": "*" }),
+    );
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Bad Gateway",
+      message: "Unable to process request",
+    });
+  });
+
+  it("retries on 5xx and succeeds on subsequent attempt", async () => {
+    const responseBody = new PassThrough();
+    fetchMock
+      .mockResolvedValueOnce({
+        status: 503,
+        headers: { get: () => null },
+        body: null,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        headers: {
+          get: (name: string) =>
+            name === "content-type" ? "application/xml" : null,
+        },
+        body: responseBody,
+      });
+
+    const middleware = createService(
+      "https://api.example.com",
+      new Set(["/path"]),
+    );
+    const req = { path: "/path", query: {} };
+    const res = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, res, next);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("does not retry on 4xx responses", async () => {
+    fetchMock.mockResolvedValueOnce({
+      status: 404,
+      headers: {
+        get: (name: string) =>
+          name === "content-type" ? "application/json" : null,
+      },
+      body: null,
+    });
 
     const middleware = createService(
       "https://api.example.com",
@@ -135,9 +215,35 @@ describe("createService", () => {
 
     await middleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(500);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("responds with 502 after all retries exhausted on 5xx", async () => {
+    fetchMock.mockResolvedValue({
+      status: 503,
+      headers: { get: () => null },
+      body: null,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    });
+
+    const middleware = createService(
+      "https://api.example.com",
+      new Set(["/path"]),
+    );
+    const req = { path: "/path", query: {} };
+    const res = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, res, next);
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(res.status).toHaveBeenCalledWith(502);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Service Unavailable",
+      error: "Bad Gateway",
       message: "Unable to process request",
     });
   });

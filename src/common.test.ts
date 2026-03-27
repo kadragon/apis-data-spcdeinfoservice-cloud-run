@@ -124,6 +124,9 @@ describe("createService", () => {
     await promise;
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(res.set).toHaveBeenCalledWith(
+      expect.objectContaining({ "Access-Control-Allow-Origin": "*" }),
+    );
     expect(res.status).toHaveBeenCalledWith(504);
     expect(res.json).toHaveBeenCalledWith({
       error: "Gateway Timeout",
@@ -148,6 +151,9 @@ describe("createService", () => {
     await promise;
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(res.set).toHaveBeenCalledWith(
+      expect.objectContaining({ "Access-Control-Allow-Origin": "*" }),
+    );
     expect(res.status).toHaveBeenCalledWith(502);
     expect(res.json).toHaveBeenCalledWith({
       error: "Bad Gateway",
@@ -162,6 +168,7 @@ describe("createService", () => {
         status: 503,
         headers: { get: () => null },
         body: null,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
       })
       .mockResolvedValueOnce({
         status: 200,
@@ -217,6 +224,7 @@ describe("createService", () => {
       status: 503,
       headers: { get: () => null },
       body: null,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     });
 
     const middleware = createService(

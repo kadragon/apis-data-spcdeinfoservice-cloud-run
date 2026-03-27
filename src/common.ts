@@ -39,15 +39,17 @@ async function fetchWithRetry(
         return response;
       }
 
+      await response.arrayBuffer();
       lastError = new UpstreamError(
         `Upstream returned ${response.status}`,
         502,
         false,
       );
     } catch (e) {
-      const isTimeout = (e as Error).name === "AbortError";
+      const isTimeout = e instanceof Error && e.name === "AbortError";
+      const message = e instanceof Error ? e.message : String(e);
       lastError = new UpstreamError(
-        isTimeout ? "Request timed out" : (e as Error).message,
+        isTimeout ? "Request timed out" : message,
         isTimeout ? 504 : 502,
         isTimeout,
       );
@@ -129,6 +131,7 @@ export function createService(
         });
     } catch (e) {
       console.error("Fetch Error:", e);
+      res.set(CORS_HEADERS);
       if (e instanceof UpstreamError) {
         res.status(e.statusCode).json({
           error: e.isTimeout ? "Gateway Timeout" : "Bad Gateway",

@@ -40,3 +40,11 @@
 - [x] 전체 테스트 통과 확인
 - [x] 전체 lint 통과 확인
 - [x] 기존 .js 소스 파일 삭제
+
+## Security Fixes — apis-data-spcdeinfoservice-cloud-run
+
+> Fix all open GitHub security alerts for this repository.
+
+### Code Scanning Alerts
+
+- [x] Fix actions/missing-workflow-permissions: Workflow does not contain permissions — .github/workflows/ci.yml:11-26. Add explicit `permissions:` block (e.g., `contents: read`) to restrict GITHUB_TOKEN scope

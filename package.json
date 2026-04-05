@@ -21,9 +21,9 @@
   },
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
+    "@biomejs/biome": "^2.4.10",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "@types/user-agents": "^1.0.4",
     "lefthook": "^2.1.4",
     "typescript": "^6.0.2",

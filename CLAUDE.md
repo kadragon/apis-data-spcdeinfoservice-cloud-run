@@ -4,32 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-API proxy server that forwards requests to Korean public data APIs (data.go.kr), injecting service keys and handling CORS. Deployed to Google Cloud Run via Cloud Build.
+API proxy server (Go + gin) that forwards requests to Korean public data APIs (data.go.kr), injecting service keys and handling CORS. Deployed to Google Cloud Run via Cloud Build.
 
 ## Commands
 
-- **Build:** `bun run build` (TypeScript compilation via tsc)
-- **Start server:** `bun run start`
-- **Lint:** `bun run lint` (Biome — linting + formatting)
-- **Lint fix:** `bun run lint:fix`
-- **Test:** `bun run test` (Vitest)
-- **Test watch:** `bun run test:watch`
+- **Build:** `go build ./...`
+- **Run:** `go run ./cmd/server`
+- **Test:** `go test ./... -race`
+- **Lint:** `golangci-lint run ./...`
 
 ## Architecture
 
-TypeScript with ES modules (`"type": "module"` in package.json). Express 5 server with three proxy routes:
+Go 1.24 + gin. cmd/internal layout.
 
-- `/SpcdeInfoService` — Korean special day info (holidays, anniversaries, 24 divisions)
-- `/GetSecuritiesProductInfoService` — Securities price info (ETF, ETN, ELW)
-- `/BidPublicInfoService` — Public bid/procurement info (construction, service, goods, etc.)
+**Proxy flow:** gin route → `proxy.NewHandler` → `fetchWithRetry` (3 attempts, 10s timeout each, 1s/2s backoff on 5xx/network error) → stream upstream body via `io.Copy`.
 
 **Key files:**
 
-- `src/index.ts` — Express app setup, API key auth middleware (`x-api-key` header, constant-time comparison), route mounting
-- `src/common.ts` — `createService(baseUrl, allowedPaths)` factory that creates proxy middleware: validates path against allowlist, appends `DATAGOKR_SERVICEKEY`, randomizes User-Agent, streams response back
-- `src/services/*.ts` — Each service defines its base URL and allowed endpoint paths, then calls `createService`
+- `cmd/server/main.go` — gin engine, env validation (`mustEnv`), `/health` (public), `AuthMiddleware`, `RegisterAll`, graceful shutdown (SIGTERM/SIGINT, 5s timeout)
+- `internal/proxy/handler.go` — `NewHandler(baseURL, upstreamPath, serviceKey)` gin.HandlerFunc; injects `serviceKey` query param, randomizes User-Agent, streams response
+- `internal/proxy/retry.go` — `fetchWithRetry`: 3 attempts, 10s per-attempt ctx timeout, exponential backoff, retries on network error and 5xx, not on 4xx; returns `cancel` func for caller to defer
+- `internal/proxy/auth.go` — `AuthMiddleware`: `OPTIONS` → 204, `x-api-key` constant-time compare (`crypto/subtle`), 401 on mismatch
+- `internal/proxy/cors.go` — `writeCORS` helper, CORS headers constant
+- `internal/proxy/useragent.go` — curated UA pool (20 strings) + `RandomUA()`
+- `internal/services/registry.go` — `ServiceSpec` struct, `all` slice, `RegisterAll(r, serviceKey)` mounts each allowed path as a gin GET route
+- `internal/services/*.go` — one `var <Name>Spec = ServiceSpec{...}` per upstream API
 
-**Adding a new proxied API:** Create a new file in `src/services/` following the existing pattern (define baseUrl + allowedPaths, export a function calling `createService`), then mount it in `index.ts`.
+**Adding a new proxied API:**
+1. Create `internal/services/<name>.go` with a `var <Name>Spec = ServiceSpec{MountPath, BaseURL, AllowedPaths}`.
+2. Add the spec to the `all` slice in `internal/services/registry.go`.
 
 ## Environment Variables
 
@@ -37,8 +40,14 @@ TypeScript with ES modules (`"type": "module"` in package.json). Express 5 serve
 - `DATAGOKR_SERVICEKEY` — Required. Injected into proxied requests to data.go.kr.
 - `PORT` — Optional (default: 3000, Dockerfile sets 8080).
 
-Both secrets are managed via Google Secret Manager (see `cloudbuild.yaml`).
+Both secrets managed via Google Secret Manager (see `cloudbuild.yaml`).
 
 ## Deployment
 
-Cloud Build (`cloudbuild.yaml`): builds Docker image (multi-stage: TypeScript compilation then production), pushes to GCR, deploys to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.
+Cloud Build (`cloudbuild.yaml`): multi-stage Docker build (golang:1.24-alpine → distroless/static-debian12:nonroot), push to GCR, deploy to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.
+
+Debug image: swap `:nonroot` to `:debug-nonroot` for BusyBox shell.
+
+## Lint
+
+`.golangci.yml` v2 config. Key linters: `bodyclose`, `noctx`, `errorlint`, `nilerr`, `forcetypeassert`. Formatters: `goimports`, `gofumpt`.

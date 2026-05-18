@@ -1,0 +1,33 @@
+package services
+
+var BidPublicInfoSpec = ServiceSpec{
+	MountPath: "/BidPublicInfoService",
+	BaseURL:   "https://apis.data.go.kr/1230000/ad/BidPublicInfoService",
+	AllowedPaths: []string{
+		"/getBidPblancListInfoCnstwk",
+		"/getBidPblancListInfoServc",
+		"/getBidPblancListInfoFrgcpt",
+		"/getBidPblancListInfoThng",
+		"/getBidPblancListInfoThngBsisAmount",
+		"/getBidPblancListInfoEtcPPSSrch",
+		"/getBidPblancListPPIFnlRfpIssAtchFileInfo",
+		"/getBidPblancListBidPrceCalclAInfo",
+		"/getBidPblancListEvaluationIndstrytyMfrcInfo",
+		"/getBidPblancListInfoEtc",
+		"/getBidPblancListInfoEorderAtchFileInfo",
+		"/getBidPblancListInfoFrgcptPurchsObjPrdct",
+		"/getBidPblancListInfoServcPurchsObjPrdct",
+		"/getBidPblancListInfoThngPurchsObjPrdct",
+		"/getBidPblancListInfoPrtcptPsblRgn",
+		"/getBidPblancListInfoLicenseLimit",
+		"/getBidPblancListInfoCnstwkBsisAmount",
+		"/getBidPblancListInfoThngPPSSrch",
+		"/getBidPblancListInfoFrgcptPPSSrch",
+		"/getBidPblancListInfoServcPPSSrch",
+		"/getBidPblancListInfoCnstwkPPSSrch",
+		"/getBidPblancListInfoChgHstryServc",
+		"/getBidPblancListInfoChgHstryCnstwk",
+		"/getBidPblancListInfoChgHstryThng",
+		"/getBidPblancListInfoServcBsisAmount",
+	},
+}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 )
@@ -13,9 +14,6 @@ const (
 	MaxRetries    = 2
 	BackoffBaseMs = 1000
 )
-
-// AttemptTimeout is a var (not const) so tests can override it.
-var AttemptTimeout = 10 * time.Second
 
 type UpstreamError struct {
 	Message    string
@@ -26,20 +24,19 @@ type UpstreamError struct {
 func (e *UpstreamError) Error() string { return e.Message }
 
 // fetchWithRetry retries on network errors and 5xx responses.
-// On success, returns the cancel func for the per-attempt ctx — caller must defer it
-// alongside resp.Body.Close() to keep the ctx alive during streaming.
-func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.Request) (*http.Response, context.CancelFunc, error) {
+// The per-attempt header deadline is governed by the client transport's
+// ResponseHeaderTimeout; once headers arrive the body streams without
+// an additional timeout so large responses are not truncated.
+func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.Request) (*http.Response, error) {
 	var lastErr error
 
 	for attempt := 0; attempt <= MaxRetries; attempt++ {
-		ctx, cancel := context.WithTimeout(parent, AttemptTimeout)
-		req := baseReq.Clone(ctx)
+		req := baseReq.Clone(parent)
 
 		resp, err := client.Do(req)
 		switch {
 		case err != nil:
-			cancel()
-			isTimeout := errors.Is(err, context.DeadlineExceeded)
+			isTimeout := isTimeoutErr(err)
 			msg := err.Error()
 			if isTimeout {
 				msg = "Request timed out"
@@ -50,13 +47,11 @@ func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.R
 				IsTimeout:  isTimeout,
 			}
 		case resp.StatusCode < 500:
-			// Success — caller owns cancel and body.
-			return resp, cancel, nil
+			return resp, nil
 		default:
 			// 5xx — drain body so the connection can be reused, then retry.
 			_, _ = io.Copy(io.Discard, resp.Body)
 			_ = resp.Body.Close()
-			cancel()
 			lastErr = &UpstreamError{
 				Message:    fmt.Sprintf("upstream returned %d", resp.StatusCode),
 				StatusCode: http.StatusBadGateway,
@@ -68,12 +63,20 @@ func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.R
 			select {
 			case <-time.After(backoff):
 			case <-parent.Done():
-				return nil, nil, parent.Err()
+				return nil, parent.Err()
 			}
 		}
 	}
 
-	return nil, nil, lastErr
+	return nil, lastErr
+}
+
+func isTimeoutErr(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var ne net.Error
+	return errors.As(err, &ne) && ne.Timeout()
 }
 
 func timeoutStatus(isTimeout bool) int {

@@ -17,7 +17,7 @@ func AuthMiddleware(expectedKey string) gin.HandlerFunc {
 		}
 
 		got := []byte(c.GetHeader("x-api-key"))
-		if len(got) != len(expected) || subtle.ConstantTimeCompare(got, expected) != 1 {
+		if subtle.ConstantTimeCompare(got, expected) != 1 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
 				"message": "Invalid or missing x-api-key header",

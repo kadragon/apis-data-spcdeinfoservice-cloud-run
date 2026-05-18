@@ -21,11 +21,10 @@ func TestFetchWithRetry_Success(t *testing.T) {
 	defer upstream.Close()
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, upstream.URL, nil)
-	resp, cancel, err := fetchWithRetry(context.Background(), testClient(), req)
+	resp, err := fetchWithRetry(context.Background(), testClient(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer cancel()
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -42,7 +41,7 @@ func TestFetchWithRetry_5xxExhausted(t *testing.T) {
 	defer upstream.Close()
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, upstream.URL, nil)
-	_, _, err := fetchWithRetry(context.Background(), testClient(), req)
+	_, err := fetchWithRetry(context.Background(), testClient(), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -67,11 +66,10 @@ func TestFetchWithRetry_4xxNoRetry(t *testing.T) {
 	defer upstream.Close()
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, upstream.URL, nil)
-	resp, cancel, err := fetchWithRetry(context.Background(), testClient(), req)
+	resp, err := fetchWithRetry(context.Background(), testClient(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer cancel()
 	defer resp.Body.Close()
 
 	if calls.Load() != 1 {
@@ -89,12 +87,14 @@ func TestFetchWithRetry_Timeout(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	orig := AttemptTimeout
-	AttemptTimeout = 50 * time.Millisecond
-	defer func() { AttemptTimeout = orig }()
+	client := &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 50 * time.Millisecond,
+		},
+	}
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, upstream.URL, nil)
-	_, _, err := fetchWithRetry(context.Background(), testClient(), req)
+	_, err := fetchWithRetry(context.Background(), client, req)
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}

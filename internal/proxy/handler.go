@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -10,13 +11,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var sharedClient = &http.Client{
-	Timeout: 0,
-	Transport: &http.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 20,
-		IdleConnTimeout:     90 * time.Second,
-	},
+// HeaderTimeout bounds time to receive response headers per attempt.
+// Body streaming is not subject to this deadline. Var so tests can override.
+var HeaderTimeout = 10 * time.Second
+
+var sharedClient = newClient()
+
+func newClient() *http.Client {
+	return &http.Client{
+		Timeout: 0,
+		Transport: &http.Transport{
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   20,
+			IdleConnTimeout:       90 * time.Second,
+			ResponseHeaderTimeout: HeaderTimeout,
+		},
+	}
 }
 
 func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
@@ -36,7 +46,7 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 		}
 		req.Header.Set("User-Agent", RandomUA())
 
-		resp, cancel, err := fetchWithRetry(c.Request.Context(), sharedClient, req)
+		resp, err := fetchWithRetry(c.Request.Context(), sharedClient, req)
 		if err != nil {
 			writeCORS(c)
 			var ue *UpstreamError
@@ -56,7 +66,6 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 			})
 			return
 		}
-		defer cancel()
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
 				log.Printf("close upstream body: %v", err)
@@ -71,7 +80,7 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 		c.Header("Content-Type", ct)
 		c.Status(resp.StatusCode)
 
-		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		if _, err := io.Copy(c.Writer, resp.Body); err != nil && !errors.Is(err, context.Canceled) {
 			log.Printf("pipe error: %v", err)
 		}
 	}

@@ -7,7 +7,7 @@ pre-commit:
 
     - name: test
       glob: "*.go"
-      run: go test ./...
+      run: go test ./... -race
 
     - name: build
       glob: "*.go"

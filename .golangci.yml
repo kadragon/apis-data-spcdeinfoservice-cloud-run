@@ -1,0 +1,35 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - errorlint
+    - nilerr
+    - misspell
+    - unconvert
+    - prealloc
+    - nolintlint
+    - errchkjson
+    - gocritic
+    - fatcontext
+    - forcetypeassert
+    - noctx
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - bodyclose
+          - errchkjson
+          - forcetypeassert
+formatters:
+  enable:
+    - goimports
+    - gofumpt

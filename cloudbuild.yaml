@@ -39,7 +39,6 @@ steps:
       - "10"
       - "--timeout"
       - "30s"
-      - "--cpu-throttling"
 
 images:
   - "asia-northeast3-docker.pkg.dev/workflow-knue/cloud-run-images/apis-data-spcdeinfoservice:$SHORT_SHA"

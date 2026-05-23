@@ -19,10 +19,10 @@ var sharedClient = newClient()
 
 func newClient() *http.Client {
 	return &http.Client{
-		Timeout: 0,
+		Timeout: 25 * time.Second,
 		Transport: &http.Transport{
 			MaxIdleConns:          100,
-			MaxIdleConnsPerHost:   20,
+			MaxIdleConnsPerHost:   50,
 			IdleConnTimeout:       90 * time.Second,
 			ResponseHeaderTimeout: HeaderTimeout,
 		},

@@ -21,8 +21,8 @@ func newClient() *http.Client {
 	return &http.Client{
 		Timeout: 0,
 		Transport: &http.Transport{
-			MaxIdleConns:          100,
-			MaxIdleConnsPerHost:   20,
+			MaxIdleConns:          200,
+			MaxIdleConnsPerHost:   200,
 			IdleConnTimeout:       90 * time.Second,
 			ResponseHeaderTimeout: HeaderTimeout,
 		},

@@ -15,12 +15,12 @@ Go 1.25 + gin API proxy forwarding requests to Korean public data APIs (data.go.
 
 ## Golden Principles
 
-Invariants enforced mechanically. Violations block commits (lefthook).
+Mechanical enforcement noted per-rule. Violations should block commits (lefthook).
 
-1. **Service keys never in logs or responses** — `DATAGOKR_SERVICEKEY` and `AUTH_API_KEY` must not appear in gin log output, error responses, or debug output. Enforced by grep hook in `.claude/settings.json`.
-2. **Auth middleware on all non-health routes** — Every route except `/health` must pass through `AuthMiddleware`. Enforced by `registry_test.go`.
-3. **New service API = new file** — One `ServiceSpec` per file in `internal/services/`. Never add a second spec to an existing service file. Enforced by sweep check.
-4. **4xx responses from upstream are never retried** — `fetchWithRetry` in `internal/proxy/retry.go` must not retry 4xx status. Enforced by `retry_test.go`.
+1. **Service keys never in logs or responses** — `DATAGOKR_SERVICEKEY` and `AUTH_API_KEY` must not appear in gin log output, error responses, or debug output. Convention only — no automated check yet.
+2. **Auth middleware on all non-health routes** — Every route except `/health` must pass through `AuthMiddleware`. Verified by `auth_test.go` (unit); no integration-level registry enforcement yet.
+3. **New service API = new file** — One `ServiceSpec` per file in `internal/services/`. Never add a second spec to an existing service file. Convention only — no automated check yet.
+4. **4xx responses from upstream are never retried** — `fetchWithRetry` in `internal/proxy/retry.go` must not retry 4xx status. Enforced by `TestFetchWithRetry_4xxNoRetry` in `retry_test.go`.
 
 ## Delegation
 
@@ -43,7 +43,7 @@ Read `docs/delegation.md` for full routing table. Objective triggers only.
 ## Working with Existing Code
 
 - Adding a new proxied API: create `internal/services/<name>.go` with one `ServiceSpec`, then add to `all` slice in `registry.go`. See `docs/conventions.md`.
-- `fetchWithRetry` returns a `cancel` func — always `defer cancel()` at call site.
+- `fetchWithRetry` signature: `(ctx, client, req) → (*http.Response, error)`. No cancel func returned; timeout is `ResponseHeaderTimeout=10s` on the transport.
 - CORS headers are set in `writeCORS` — do not add headers in handlers.
 - `RandomUA()` is called inside `NewHandler` — no need to pass UA explicitly.
 

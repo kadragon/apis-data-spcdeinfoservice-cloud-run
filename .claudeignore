@@ -8,6 +8,7 @@
 .vscode/
 .idea/
 .fleet/
+.antigravitycli/
 
 # Go build outputs
 bin/

@@ -47,7 +47,7 @@ cmd/server → internal/services → internal/proxy
 
 ```
 Request → gin router → AuthMiddleware → gin.HandlerFunc (NewHandler)
-  → fetchWithRetry (3 attempts, 10s/attempt, 1s/2s backoff on 5xx/network)
+  → fetchWithRetry (3 attempts, ResponseHeaderTimeout=10s per attempt, no body timeout, 1s/2s backoff on 5xx/network)
   → inject serviceKey query param + random User-Agent
   → stream upstream body via io.Copy
   → writeCORS headers
@@ -57,5 +57,5 @@ Request → gin router → AuthMiddleware → gin.HandlerFunc (NewHandler)
 
 1. **`ServiceSpec`** — declarative config for one upstream API: `MountPath`, `BaseURL`, `AllowedPaths`. Adding a new API = one new file with one `ServiceSpec`.
 2. **`NewHandler`** — factory returning `gin.HandlerFunc`; takes `(baseURL, upstreamPath, serviceKey)`. Stateless — no shared mutable state.
-3. **`fetchWithRetry`** — returns `(*http.Response, context.CancelFunc, error)`. Caller MUST `defer cancel()` to avoid context leak.
+3. **`fetchWithRetry`** — signature `(ctx, client, req) → (*http.Response, error)`. No `CancelFunc` returned. Timeout is `ResponseHeaderTimeout=10s` on the HTTP transport; body streaming has no deadline.
 4. **`AuthMiddleware`** — wraps the entire router group (excluding `/health`). `OPTIONS` → 204 pass-through for preflight.

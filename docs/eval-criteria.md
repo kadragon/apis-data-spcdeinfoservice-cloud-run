@@ -24,19 +24,23 @@ No secrets in logs, responses, or source. Auth enforced on all non-health routes
 
 | Score | Description |
 |-------|-------------|
-| 5 | `grep -r "DATAGOKR_SERVICEKEY\|AUTH_API_KEY" --include="*.go"` returns no hardcoded values; all routes except `/health` require auth |
+| 5 | No hardcoded secret values in source; all routes except `/health` require auth |
 | 3 | Secrets not hardcoded but present in a log statement |
 | 1 | Secret value visible in any response body or log output |
 
-**How to test:** `grep -r 'serviceKey\|AUTH_API_KEY' internal/ --include="*.go"` should show only parameter passing, never string literals with real values.
+**How to test:** Scan for literal high-entropy strings that look like API keys (not env var names, which are expected in source):
+```bash
+grep -rE '"[a-zA-Z0-9+/=_\-]{32,}"' internal/ cmd/ --include="*.go"
+```
+Also verify auth manually: `curl localhost:3000/SpcdeInfoService/getAnniversaryInfo` (no key) → expect 401.
 
 ### 3. Convention Compliance (20%)
 
-One `ServiceSpec` per file, `cancel` func deferred, `bodyclose` satisfied, no raw error strings.
+One `ServiceSpec` per file, `bodyclose` satisfied, no raw error strings.
 
 | Score | Description |
 |-------|-------------|
-| 5 | `golangci-lint run ./...` exits 0; one spec per file; cancel deferred at call site |
+| 5 | `golangci-lint run ./...` exits 0; one spec per file |
 | 3 | Lint passes but convention violations caught in review |
 | 1 | Lint fails or two specs in same file |
 

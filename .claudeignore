@@ -1,0 +1,19 @@
+# Logs & temp
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Editor / OS
+.vscode/
+.idea/
+.fleet/
+.antigravitycli/
+
+# Go build outputs
+bin/
+vendor/
+
+# Archives
+*.zip
+*.tar.gz

@@ -10,3 +10,6 @@
 *.swp
 *.swo
 *.tmp
+
+# Tool configs (machine-local)
+.antigravitycli/

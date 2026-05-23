@@ -46,17 +46,17 @@ steps:
     args:
       - "-c"
       - |
-        URL=$(gcloud run services describe apis-data-spcdeinfoservice \
+        URL=$$(gcloud run services describe apis-data-spcdeinfoservice \
           --region=asia-northeast3 --platform=managed \
           --format='value(status.url)')
-        echo "Checking $URL/health"
+        echo "Checking $$URL/health"
         for i in 1 2 3 4 5; do
-          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health")
-          if [ "$STATUS" = "200" ]; then
+          STATUS=$$(curl -sf -o /dev/null -w "%{http_code}" "$$URL/health")
+          if [ "$$STATUS" = "200" ]; then
             echo "Health check passed"
             exit 0
           fi
-          echo "Attempt $i: HTTP $STATUS — retrying in 5s"
+          echo "Attempt $$i: HTTP $$STATUS — retrying in 5s"
           sleep 5
         done
         echo "Health check failed after 5 attempts"

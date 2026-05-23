@@ -15,8 +15,6 @@ import (
 // Body streaming is not subject to this deadline. Var so tests can override.
 var HeaderTimeout = 10 * time.Second
 
-var sharedClient = NewClient()
-
 func NewClient() *http.Client {
 	return &http.Client{
 		Timeout: 0,
@@ -30,6 +28,9 @@ func NewClient() *http.Client {
 }
 
 func NewHandler(baseURL, upstreamPath, serviceKey string, client *http.Client) gin.HandlerFunc {
+	if client == nil {
+		panic("NewHandler: client must not be nil")
+	}
 	return func(c *gin.Context) {
 		q := c.Request.URL.Query()
 		q.Set("serviceKey", serviceKey)

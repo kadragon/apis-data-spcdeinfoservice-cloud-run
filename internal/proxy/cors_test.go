@@ -40,6 +40,21 @@ func TestCORSMiddleware_OptionsPreflight(t *testing.T) {
 	}
 }
 
+func TestCORSAndAuth_OptionsPreflightSkipsAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(CORSMiddleware())
+	r.Use(AuthMiddleware("secret"))
+	r.GET("/test", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req := httptest.NewRequestWithContext(context.Background(), "OPTIONS", "/test", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("OPTIONS must return 204 without x-api-key, got %d", rec.Code)
+	}
+}
+
 func TestCORSMiddleware_HeadersPresentOnUnauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

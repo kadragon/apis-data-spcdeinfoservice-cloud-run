@@ -28,12 +28,12 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(proxy.CORSMiddleware())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	r.Use(proxy.CORSMiddleware())
 	r.Use(proxy.AuthMiddleware(authKey))
 
 	client := proxy.NewClient()

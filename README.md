@@ -49,7 +49,7 @@ curl -H "x-api-key: YOUR_API_KEY" \
 
 ## Deployment
 
-Cloud Build (`cloudbuild.yaml`) → GCR → Cloud Run `asia-northeast3` (project `workflow-knue`).
+Cloud Build (`cloudbuild.yaml`) → Artifact Registry → Cloud Run `asia-northeast3` (project `workflow-knue`).
 Secrets managed via Google Secret Manager.
 
 > **Debug image:** distroless has no shell. Swap `gcr.io/distroless/static-debian12:nonroot`

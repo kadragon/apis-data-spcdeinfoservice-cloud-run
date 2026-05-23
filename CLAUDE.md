@@ -44,7 +44,7 @@ Both secrets managed via Google Secret Manager (see `cloudbuild.yaml`).
 
 ## Deployment
 
-Cloud Build (`cloudbuild.yaml`): multi-stage Docker build (golang:1.24-alpine → distroless/static-debian12:nonroot), push to GCR, deploy to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.
+Cloud Build (`cloudbuild.yaml`): multi-stage Docker build (golang:1.24-alpine → distroless/static-debian12:nonroot), push to Artifact Registry (`asia-northeast3-docker.pkg.dev/workflow-knue/cloud-run-images`), deploy to Cloud Run in `asia-northeast3`. Project: `workflow-knue`.
 
 Debug image: swap `:nonroot` to `:debug-nonroot` for BusyBox shell.
 

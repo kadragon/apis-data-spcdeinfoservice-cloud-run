@@ -14,7 +14,8 @@ import (
 func newHandlerEngine(upstream *httptest.Server) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.GET("/svc/getThing", NewHandler(upstream.URL, "/getThing", "test-svc-key"))
+	r.Use(CORSMiddleware())
+	r.GET("/svc/getThing", NewHandler(upstream.URL, "/getThing", "test-svc-key", sharedClient))
 	return r
 }
 

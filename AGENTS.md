@@ -44,7 +44,7 @@ Read `docs/delegation.md` for full routing table. Objective triggers only.
 
 - Adding a new proxied API: create `internal/services/<name>.go` with one `ServiceSpec`, then add to `all` slice in `registry.go`. See `docs/conventions.md`.
 - `fetchWithRetry` signature: `(ctx, client, req) → (*http.Response, error)`. No cancel func returned; timeout is `ResponseHeaderTimeout=10s` on the transport.
-- CORS headers are set in `writeCORS` — do not add headers in handlers.
+- CORS headers are set in `CORSMiddleware()` registered before `AuthMiddleware` — do not add headers in handlers.
 - `RandomUA()` is called inside `NewHandler` — no need to pass UA explicitly.
 
 ## Language Policy

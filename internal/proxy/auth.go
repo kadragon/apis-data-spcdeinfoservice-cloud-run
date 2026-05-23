@@ -10,12 +10,6 @@ import (
 func AuthMiddleware(expectedKey string) gin.HandlerFunc {
 	expected := []byte(expectedKey)
 	return func(c *gin.Context) {
-		if c.Request.Method == http.MethodOptions {
-			writeCORS(c)
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
 		got := []byte(c.GetHeader("x-api-key"))
 		if subtle.ConstantTimeCompare(got, expected) != 1 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -24,7 +18,6 @@ func AuthMiddleware(expectedKey string) gin.HandlerFunc {
 			})
 			return
 		}
-
 		c.Next()
 	}
 }

@@ -51,19 +51,6 @@ func TestAuthMiddleware_CorrectKey(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_OptionsPreflight(t *testing.T) {
-	r := newAuthEngine("secret")
-	req := httptest.NewRequestWithContext(context.Background(), "OPTIONS", "/test", nil)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("want 204, got %d", rec.Code)
-	}
-	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
-		t.Fatal("missing CORS header")
-	}
-}
-
 func TestAuthMiddleware_LengthMismatch(t *testing.T) {
 	r := newAuthEngine("secret")
 	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)

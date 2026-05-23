@@ -28,6 +28,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(proxy.CORSMiddleware())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -35,7 +36,10 @@ func main() {
 
 	r.Use(proxy.AuthMiddleware(authKey))
 
-	services.RegisterAll(r, serviceKey)
+	client := proxy.NewClient()
+	services.RegisterAll(r, serviceKey, func(baseURL, path, svcKey string) gin.HandlerFunc {
+		return proxy.NewHandler(baseURL, path, svcKey, client)
+	})
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found"})

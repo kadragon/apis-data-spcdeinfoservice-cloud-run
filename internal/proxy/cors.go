@@ -1,15 +1,25 @@
 package proxy
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
 
-var corsHeaders = map[string]string{
-	"Access-Control-Allow-Origin":  "*",
-	"Access-Control-Allow-Methods": "GET, OPTIONS",
-	"Access-Control-Allow-Headers": "x-api-key, Content-Type",
-}
+	"github.com/gin-gonic/gin"
+)
 
-func writeCORS(c *gin.Context) {
-	for k, v := range corsHeaders {
-		c.Header(k, v)
+func CORSMiddleware() gin.HandlerFunc {
+	headers := map[string]string{
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Methods": "GET, OPTIONS",
+		"Access-Control-Allow-Headers": "x-api-key, Content-Type",
+	}
+	return func(c *gin.Context) {
+		for k, v := range headers {
+			c.Header(k, v)
+		}
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
 	}
 }

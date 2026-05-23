@@ -16,13 +16,13 @@
 cmd/server/main.go          gin engine, env validation, route registration, graceful shutdown
 internal/
   proxy/
-    handler.go              NewHandler — builds gin.HandlerFunc for a proxied route
+    handler.go              NewHandler — builds gin.HandlerFunc for a proxied route; NewClient() — default HTTP client constructor
     retry.go                fetchWithRetry — HTTP client with 3-attempt retry + backoff
     auth.go                 AuthMiddleware — x-api-key constant-time compare
-    cors.go                 writeCORS — sets CORS response headers
+    cors.go                 CORSMiddleware — sets CORS headers on all responses, handles OPTIONS preflight
     useragent.go            RandomUA() — random User-Agent from curated pool
   services/
-    registry.go             ServiceSpec struct, all slice, RegisterAll()
+    registry.go             ServiceSpec struct, HandlerFactory type, all slice, RegisterAll()
     *.go                    one ServiceSpec per file (one var per file)
 ```
 
@@ -46,16 +46,20 @@ cmd/server → internal/services → internal/proxy
 ## Proxy Flow
 
 ```
-Request → gin router → AuthMiddleware → gin.HandlerFunc (NewHandler)
-  → fetchWithRetry (3 attempts, ResponseHeaderTimeout=10s per attempt, no body timeout, 1s/2s backoff on 5xx/network)
-  → inject serviceKey query param + random User-Agent
-  → stream upstream body via io.Copy
-  → writeCORS headers
+Request → gin router → CORSMiddleware (sets CORS headers; OPTIONS → 204 abort)
+  → AuthMiddleware (x-api-key check; 401 already has CORS from above)
+  → gin.HandlerFunc (NewHandler)
+    → fetchWithRetry (3 attempts, ResponseHeaderTimeout=10s per attempt, no body timeout, 1s/2s backoff on 5xx/network)
+    → inject serviceKey query param + random User-Agent
+    → stream upstream body via io.Copy
 ```
 
 ## Key Abstractions
 
 1. **`ServiceSpec`** — declarative config for one upstream API: `MountPath`, `BaseURL`, `AllowedPaths`. Adding a new API = one new file with one `ServiceSpec`.
-2. **`NewHandler`** — factory returning `gin.HandlerFunc`; takes `(baseURL, upstreamPath, serviceKey)`. Stateless — no shared mutable state.
-3. **`fetchWithRetry`** — signature `(ctx, client, req) → (*http.Response, error)`. No `CancelFunc` returned. Timeout is `ResponseHeaderTimeout=10s` on the HTTP transport; body streaming has no deadline.
-4. **`AuthMiddleware`** — wraps the entire router group (excluding `/health`). `OPTIONS` → 204 pass-through for preflight.
+2. **`HandlerFactory`** — `func(baseURL, path, serviceKey string) gin.HandlerFunc`. Passed to `RegisterAll`; `main.go` closes over the HTTP client. Swap the factory to change handler strategy (caching, rate-limiting) without touching the registry.
+3. **`NewHandler`** — factory returning `gin.HandlerFunc`; takes `(baseURL, upstreamPath, serviceKey string, client *http.Client)`. Stateless — no shared mutable state.
+4. **`NewClient`** — constructs the default `*http.Client` with tuned transport. `main.go` calls this once and closes over it in the factory.
+5. **`fetchWithRetry`** — signature `(ctx, client, req) → (*http.Response, error)`. No `CancelFunc` returned. Timeout is `ResponseHeaderTimeout=10s` on the HTTP transport; body streaming has no deadline.
+6. **`CORSMiddleware`** — registered before `AuthMiddleware`; sets CORS headers on every response including 401 and handles `OPTIONS` preflight (204). Do not add CORS headers in handlers.
+7. **`AuthMiddleware`** — wraps the entire router group (excluding `/health` and OPTIONS preflights handled by `CORSMiddleware`).

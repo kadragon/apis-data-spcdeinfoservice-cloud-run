@@ -9,10 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func stubFactory(_, _, _ string) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Status(http.StatusOK) }
+}
+
 func newTestEngine(serviceKey string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	RegisterAll(r, serviceKey)
+	RegisterAll(r, serviceKey, stubFactory)
 	return r
 }
 

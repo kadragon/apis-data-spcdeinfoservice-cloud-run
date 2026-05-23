@@ -15,9 +15,7 @@ import (
 // Body streaming is not subject to this deadline. Var so tests can override.
 var HeaderTimeout = 10 * time.Second
 
-var sharedClient = newClient()
-
-func newClient() *http.Client {
+func NewClient() *http.Client {
 	return &http.Client{
 		Timeout: 0,
 		Transport: &http.Transport{
@@ -29,7 +27,10 @@ func newClient() *http.Client {
 	}
 }
 
-func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
+func NewHandler(baseURL, upstreamPath, serviceKey string, client *http.Client) gin.HandlerFunc {
+	if client == nil {
+		panic("NewHandler: client must not be nil")
+	}
 	return func(c *gin.Context) {
 		q := c.Request.URL.Query()
 		q.Set("serviceKey", serviceKey)
@@ -37,7 +38,6 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 
 		req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, target, nil)
 		if err != nil {
-			writeCORS(c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error":   "Internal Server Error",
 				"message": "Failed to build upstream request",
@@ -46,9 +46,8 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 		}
 		req.Header.Set("User-Agent", RandomUA())
 
-		resp, err := fetchWithRetry(c.Request.Context(), sharedClient, req)
+		resp, err := fetchWithRetry(c.Request.Context(), client, req)
 		if err != nil {
-			writeCORS(c)
 			var ue *UpstreamError
 			if errors.As(err, &ue) {
 				errTitle := "Bad Gateway"
@@ -76,7 +75,6 @@ func NewHandler(baseURL, upstreamPath, serviceKey string) gin.HandlerFunc {
 		if ct == "" {
 			ct = "application/xml"
 		}
-		writeCORS(c)
 		c.Header("Content-Type", ct)
 		c.Status(resp.StatusCode)
 

@@ -45,8 +45,8 @@ func TestFetchWithRetry_5xxExhausted(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if calls.Load() != 3 {
-		t.Fatalf("want 3 attempts, got %d", calls.Load())
+	if calls.Load() != 2 {
+		t.Fatalf("want 2 attempts, got %d", calls.Load())
 	}
 	var ue *UpstreamError
 	if !errors.As(err, &ue) {

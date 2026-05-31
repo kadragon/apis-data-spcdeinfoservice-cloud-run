@@ -112,8 +112,8 @@ func TestHandler_5xxRetryExhaustion(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("want 502, got %d", rec.Code)
 	}
-	if calls.Load() != 3 {
-		t.Fatalf("want 3 upstream calls, got %d", calls.Load())
+	if calls.Load() != 2 {
+		t.Fatalf("want 2 upstream calls, got %d", calls.Load())
 	}
 	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Fatal("missing CORS on error response")

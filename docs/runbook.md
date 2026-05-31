@@ -87,8 +87,12 @@ Swap base image in Dockerfile: `:nonroot` → `:debug-nonroot` for BusyBox shell
 | `AUTH_API_KEY` | Yes | Client auth key, checked via `x-api-key` header |
 | `DATAGOKR_SERVICEKEY` | Yes | Injected as query param into data.go.kr requests |
 | `PORT` | No | HTTP listen port (default: 3000; Dockerfile sets 8080) |
+| `CACHE_ENABLED` | No | Set to `"true"` to enable in-memory response caching (default: off) |
+| `CACHE_TTL_MINUTES` | No | Cache TTL in minutes when `CACHE_ENABLED=true` (default: 10) |
 
-Both secrets managed via Google Secret Manager (`workflow-knue` project).
+`AUTH_API_KEY` and `DATAGOKR_SERVICEKEY` managed via Google Secret Manager (`workflow-knue` project).
+
+**Cache limitation:** responses are cached based on HTTP status code only. data.go.kr returns HTTP 200 for some error conditions (e.g. rate-limit exceeded, invalid service key). These error responses will be cached for the full TTL. Monitor for `cache: stored key=` log lines when diagnosing unexpected error runs.
 
 ## Common Failures
 
@@ -113,8 +117,8 @@ Both secrets managed via Google Secret Manager (`workflow-knue` project).
 **Manual.** Run between features:
 
 ```bash
-# No tools/sweep.sh yet — manual checks:
-golangci-lint run ./...
-go test ./... -race
-grep -r "serviceKey\|AUTH_API_KEY" internal/ --include="*.go"  # verify no secrets in logs
+tools/sweep.sh        # convention + format + test checks
+go test ./... -race   # race detector
 ```
+
+`tools/sweep.sh` also runs automatically as a lefthook pre-commit hook.

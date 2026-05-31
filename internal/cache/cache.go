@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var _ Cache = (*InMemoryCache)(nil)
+
 // Cache defines the caching operations required.
 type Cache interface {
 	Set(key string, val interface{}, ttl time.Duration)
@@ -27,10 +29,11 @@ func (item *cacheItem) expired() bool {
 
 // InMemoryCache provides a thread-safe, TTL-based caching layer.
 type InMemoryCache struct {
-	mu      sync.RWMutex
-	items   map[string]cacheItem
-	cleanup time.Duration
-	stop    chan struct{}
+	mu        sync.RWMutex
+	items     map[string]cacheItem
+	cleanup   time.Duration
+	stop      chan struct{}
+	closeOnce sync.Once
 }
 
 // NewInMemoryCache instantiates a thread-safe memory cache.
@@ -47,7 +50,7 @@ func NewInMemoryCache(cleanupInterval time.Duration) *InMemoryCache {
 	return c
 }
 
-// Set stores a value inside the cache with a specified TTL.
+// Set stores a value under key with the given TTL. A ttl of zero or less stores the item with no expiration.
 func (c *InMemoryCache) Set(key string, val interface{}, ttl time.Duration) {
 	var exp int64
 	if ttl > 0 {
@@ -88,11 +91,9 @@ func (c *InMemoryCache) Delete(key string) {
 	delete(c.items, key)
 }
 
-// Close shuts down the janitor cleanup goroutine.
+// Close signals the background janitor to stop. Safe to call multiple times.
 func (c *InMemoryCache) Close() {
-	if c.stop != nil {
-		close(c.stop)
-	}
+	c.closeOnce.Do(func() { close(c.stop) })
 }
 
 func (c *InMemoryCache) startJanitor() {

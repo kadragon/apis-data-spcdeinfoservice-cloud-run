@@ -32,7 +32,7 @@ if grep -rn 'gin.Logger()' cmd/ > /dev/null 2>&1; then
 fi
 
 # 2. Golden Principle 2: Auth middleware on all non-health routes
-# Check that proxy.AuthMiddleware is reference in cmd/server/main.go
+# Check that proxy.AuthMiddleware string appears in cmd/server/main.go (string-presence only; does not verify route scope)
 echo "Checking for AuthMiddleware registration..."
 if ! grep -q 'proxy.AuthMiddleware' cmd/server/main.go; then
   echo "❌ Error: AuthMiddleware registration missing in cmd/server/main.go"

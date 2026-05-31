@@ -3,12 +3,15 @@ package proxy
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/kadragon/apis-data-spcdeinfoservice-cloud-run/internal/cache"
 )
+
+var _ http.RoundTripper = (*CachingRoundTripper)(nil)
 
 type cachedResponse struct {
 	StatusCode int
@@ -42,7 +45,6 @@ func (c *CachingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	key := generateCacheKey(req.Method, req.URL)
 	if val, found := c.cache.Get(key); found {
 		if cached, ok := val.(*cachedResponse); ok {
-			// Restore response from cache
 			resp := &http.Response{
 				StatusCode:    cached.StatusCode,
 				Proto:         "HTTP/1.1",
@@ -57,7 +59,6 @@ func (c *CachingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 		}
 	}
 
-	// Cache Miss: execute upstream call
 	resp, err := c.underlying.RoundTrip(req)
 	if err != nil {
 		return nil, err
@@ -77,8 +78,10 @@ func (c *CachingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 			Body:       bodyBytes,
 		}
 		c.cache.Set(key, cached, c.ttl)
+		// Note: data.go.kr may return HTTP 200 with an error body (e.g. resultCode != "00").
+		// This proxy does not inspect response bodies, so such errors are cached for the full TTL.
+		log.Printf("cache: stored key=%q ttl=%s", key, c.ttl)
 
-		// Re-populate response body for current consumer
 		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 

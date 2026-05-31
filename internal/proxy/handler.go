@@ -28,16 +28,25 @@ func NewClient() *http.Client {
 
 	var rt http.RoundTripper = transport
 
-	if os.Getenv("CACHE_ENABLED") == "true" {
+	cacheEnabled := os.Getenv("CACHE_ENABLED")
+	if cacheEnabled != "" && cacheEnabled != "true" {
+		log.Printf("cache: CACHE_ENABLED=%q not recognized; use \"true\" to enable", cacheEnabled)
+	}
+	if cacheEnabled == "true" {
 		ttlMin := 10
 		if ttlStr := os.Getenv("CACHE_TTL_MINUTES"); ttlStr != "" {
-			if val, err := strconv.Atoi(ttlStr); err == nil && val > 0 {
+			if val, err := strconv.Atoi(ttlStr); err != nil {
+				log.Printf("cache: CACHE_TTL_MINUTES=%q is not a valid integer, using default %d min", ttlStr, ttlMin)
+			} else if val <= 0 {
+				log.Printf("cache: CACHE_TTL_MINUTES=%d must be positive, using default %d min", val, ttlMin)
+			} else {
 				ttlMin = val
 			}
 		}
 		ttl := time.Duration(ttlMin) * time.Minute
 		memCache := cache.NewInMemoryCache(1 * time.Minute)
 		rt = NewCachingRoundTripper(transport, memCache, ttl)
+		log.Printf("cache: enabled, ttl=%s", ttl)
 	}
 
 	return &http.Client{

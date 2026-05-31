@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -55,4 +57,29 @@ func TestInMemoryCache_Delete(t *testing.T) {
 	if found {
 		t.Fatal("expected foo to be deleted")
 	}
+}
+
+func TestInMemoryCache_ConcurrentAccess(t *testing.T) {
+	c := NewInMemoryCache(0)
+	defer c.Close()
+
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			c.Set(fmt.Sprintf("k%d", i), i, time.Minute)
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			c.Get(fmt.Sprintf("k%d", i))
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestInMemoryCache_CloseIdempotent(t *testing.T) {
+	c := NewInMemoryCache(10 * time.Millisecond)
+	c.Close()
+	c.Close() // must not panic
 }

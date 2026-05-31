@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MaxRetries    = 2
+	MaxRetries    = 1
 	BackoffBaseMs = 1000
 )
 

@@ -7,7 +7,7 @@
 ## Next
 
 - [ ] Add `tools/sweep.sh` for periodic harness checks
-- [ ] Align retry budget with Cloud Run request timeout: `MaxRetries=2` + `ResponseHeaderTimeout=10s` + backoffs = ~33s exceeds `--timeout 30s`. Either lower Cloud Run timeout to ≥90s or cap retries to 1. See `internal/proxy/retry.go` + `cloudbuild.yaml`.
+- [x] Align retry budget with Cloud Run request timeout: capped `MaxRetries=1`, reducing maximum duration budget to ~11s, which is well below the `--timeout 30s` limit.
 
 ## Someday
 

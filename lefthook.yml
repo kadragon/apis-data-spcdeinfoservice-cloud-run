@@ -12,3 +12,6 @@ pre-commit:
     - name: build
       glob: "*.go"
       run: go build ./...
+
+    - name: sweep
+      run: ./tools/sweep.sh

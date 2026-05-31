@@ -6,7 +6,7 @@
 
 ## Next
 
-- [ ] Add `tools/sweep.sh` for periodic harness checks
+- [x] Add `tools/sweep.sh` for periodic harness checks and integrated with lefthook pre-commit
 - [x] Align retry budget with Cloud Run request timeout: capped `MaxRetries=1`, reducing maximum duration budget to ~11s, which is well below the `--timeout 30s` limit.
 
 ## Someday

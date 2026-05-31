@@ -6,9 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kadragon/apis-data-spcdeinfoservice-cloud-run/internal/cache"
 )
 
 // HeaderTimeout bounds time to receive response headers per attempt.
@@ -16,14 +19,30 @@ import (
 var HeaderTimeout = 10 * time.Second
 
 func NewClient() *http.Client {
+	transport := &http.Transport{
+		MaxIdleConns:          200,
+		MaxIdleConnsPerHost:   200,
+		IdleConnTimeout:       90 * time.Second,
+		ResponseHeaderTimeout: HeaderTimeout,
+	}
+
+	var rt http.RoundTripper = transport
+
+	if os.Getenv("CACHE_ENABLED") == "true" {
+		ttlMin := 10
+		if ttlStr := os.Getenv("CACHE_TTL_MINUTES"); ttlStr != "" {
+			if val, err := strconv.Atoi(ttlStr); err == nil && val > 0 {
+				ttlMin = val
+			}
+		}
+		ttl := time.Duration(ttlMin) * time.Minute
+		memCache := cache.NewInMemoryCache(1 * time.Minute)
+		rt = NewCachingRoundTripper(transport, memCache, ttl)
+	}
+
 	return &http.Client{
-		Timeout: 0,
-		Transport: &http.Transport{
-			MaxIdleConns:          200,
-			MaxIdleConnsPerHost:   200,
-			IdleConnTimeout:       90 * time.Second,
-			ResponseHeaderTimeout: HeaderTimeout,
-		},
+		Timeout:   0,
+		Transport: rt,
 	}
 }
 

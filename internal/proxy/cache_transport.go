@@ -3,7 +3,7 @@ package proxy
 import (
 	"bytes"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -80,7 +80,7 @@ func (c *CachingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 		c.cache.Set(key, cached, c.ttl)
 		// Note: data.go.kr may return HTTP 200 with an error body (e.g. resultCode != "00").
 		// This proxy does not inspect response bodies, so such errors are cached for the full TTL.
-		log.Printf("cache: stored key=%q ttl=%s", key, c.ttl)
+		slog.Debug("cache stored", "key", key, "ttl", c.ttl.String())
 
 		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}

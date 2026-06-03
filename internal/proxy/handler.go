@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -30,15 +30,15 @@ func NewClient() *http.Client {
 
 	cacheEnabled := os.Getenv("CACHE_ENABLED")
 	if cacheEnabled != "" && cacheEnabled != "true" {
-		log.Printf("cache: CACHE_ENABLED=%q not recognized; use \"true\" to enable", cacheEnabled)
+		slog.Warn("cache: unrecognized CACHE_ENABLED", "value", cacheEnabled)
 	}
 	if cacheEnabled == "true" {
 		ttlMin := 10
 		if ttlStr := os.Getenv("CACHE_TTL_MINUTES"); ttlStr != "" {
 			if val, err := strconv.Atoi(ttlStr); err != nil {
-				log.Printf("cache: CACHE_TTL_MINUTES=%q is not a valid integer, using default %d min", ttlStr, ttlMin)
+				slog.Warn("cache: invalid CACHE_TTL_MINUTES, using default", "value", ttlStr, "default_min", ttlMin)
 			} else if val <= 0 {
-				log.Printf("cache: CACHE_TTL_MINUTES=%d must be positive, using default %d min", val, ttlMin)
+				slog.Warn("cache: non-positive CACHE_TTL_MINUTES, using default", "value", val, "default_min", ttlMin)
 			} else {
 				ttlMin = val
 			}
@@ -46,7 +46,7 @@ func NewClient() *http.Client {
 		ttl := time.Duration(ttlMin) * time.Minute
 		memCache := cache.NewInMemoryCache(1 * time.Minute)
 		rt = NewCachingRoundTripper(transport, memCache, ttl)
-		log.Printf("cache: enabled, ttl=%s", ttl)
+		slog.Info("cache enabled", "ttl", ttl.String())
 	}
 
 	return &http.Client{
@@ -95,7 +95,7 @@ func NewHandler(baseURL, upstreamPath, serviceKey string, client *http.Client) g
 		}
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
-				log.Printf("close upstream body: %v", err)
+				slog.Error("close upstream body", "err", err)
 			}
 		}()
 
@@ -107,7 +107,7 @@ func NewHandler(baseURL, upstreamPath, serviceKey string, client *http.Client) g
 		c.Status(resp.StatusCode)
 
 		if _, err := io.Copy(c.Writer, resp.Body); err != nil && !errors.Is(err, context.Canceled) {
-			log.Printf("pipe error: %v", err)
+			slog.Warn("pipe error", "err", err)
 		}
 	}
 }

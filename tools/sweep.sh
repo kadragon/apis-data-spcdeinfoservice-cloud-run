@@ -13,9 +13,9 @@ FAILED=0
 # Verify no direct logging of serviceKey, authKey, DATAGOKR_SERVICEKEY, AUTH_API_KEY
 # Ensure gin.Default() or gin.Logger() (which leak path parameters including service keys) are not used
 echo "Checking for sensitive key leak in logs..."
-if grep -rnE 'log\.(Print|Fatal|Panic)[a-zA-Z]*\(.*(serviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ > /dev/null 2>&1; then
+if grep -rnE '(log|slog)\.(Print|Fatal|Panic|Info|Warn|Error|Debug)[a-zA-Z]*\(.*(serviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ > /dev/null 2>&1; then
   echo "❌ Error: Code contains direct logging of sensitive keys."
-  grep -rnE 'log\.(Print|Fatal|Panic)[a-zA-Z]*\(.*(serviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ || true
+  grep -rnE '(log|slog)\.(Print|Fatal|Panic|Info|Warn|Error|Debug)[a-zA-Z]*\(.*(serviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ || true
   FAILED=1
 fi
 

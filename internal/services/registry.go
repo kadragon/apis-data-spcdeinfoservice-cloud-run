@@ -10,8 +10,16 @@ type ServiceSpec struct {
 	AllowedPaths []string
 }
 
+// HandlerParams carries the named inputs for constructing a proxy handler,
+// preventing silent swaps between same-typed positional arguments.
+type HandlerParams struct {
+	BaseURL    string
+	Path       string
+	ServiceKey string
+}
+
 // HandlerFactory constructs a gin.HandlerFunc for a proxied upstream path.
-type HandlerFactory func(baseURL, path, serviceKey string) gin.HandlerFunc
+type HandlerFactory func(HandlerParams) gin.HandlerFunc
 
 var all = []ServiceSpec{
 	BidPublicInfoSpec,
@@ -26,7 +34,7 @@ func RegisterAll(r *gin.Engine, serviceKey string, factory HandlerFactory) {
 	for _, s := range all {
 		grp := r.Group(s.MountPath)
 		for _, p := range s.AllowedPaths {
-			grp.GET(p, factory(s.BaseURL, p, serviceKey))
+			grp.GET(p, factory(HandlerParams{BaseURL: s.BaseURL, Path: p, ServiceKey: serviceKey}))
 		}
 	}
 }

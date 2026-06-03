@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -77,6 +78,27 @@ func TestFetchWithRetry_4xxNoRetry(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestFetchWithRetry_NetworkErrorScrubsServiceKey(t *testing.T) {
+	// Unroutable address forces a connection error whose *url.Error embeds
+	// the full request URL, including the secret serviceKey query param.
+	const secret = "TOPSECRETKEY1234"
+	target := "http://127.0.0.1:1/path?serviceKey=" + secret + "&a=1"
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, target, nil)
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	_, err := fetchWithRetry(context.Background(), client, req)
+	if err == nil {
+		t.Fatal("expected network error")
+	}
+	var ue *UpstreamError
+	if !errors.As(err, &ue) {
+		t.Fatalf("want UpstreamError, got %T", err)
+	}
+	if strings.Contains(ue.Message, secret) {
+		t.Fatalf("serviceKey leaked in error message: %s", ue.Message)
 	}
 }
 

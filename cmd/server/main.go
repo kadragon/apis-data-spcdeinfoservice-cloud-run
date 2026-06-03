@@ -70,17 +70,24 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
+	serveErr := make(chan error, 1)
 	go func() {
 		slog.Info("server starting", "port", port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("listen failed", "err", err)
-			os.Exit(1)
+			serveErr <- err
 		}
 	}()
 
-	<-ctx.Done()
-	stop()
-	slog.Info("shutting down gracefully")
+	select {
+	case <-ctx.Done():
+		stop()
+		slog.Info("shutting down gracefully")
+	case err := <-serveErr:
+		// Surface the listen failure through the main goroutine so defers and
+		// the signal handler unwind cleanly instead of os.Exit-ing mid-stack.
+		slog.Error("listen failed", "err", err)
+		os.Exit(1)
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := srv.Shutdown(shutdownCtx); err != nil {

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.R
 		switch {
 		case err != nil:
 			isTimeout := isTimeoutErr(err)
-			msg := err.Error()
+			msg := scrubServiceKey(err)
 			if isTimeout {
 				msg = "Request timed out"
 			}
@@ -69,6 +70,33 @@ func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.R
 	}
 
 	return nil, lastErr
+}
+
+// scrubServiceKey returns err's message with any embedded upstream URL
+// redacted so the secret serviceKey query param never reaches logs or
+// responses. *url.Error embeds the full request URL; we rewrite its URL
+// field before stringifying. Falls back to the raw message for other errors.
+func scrubServiceKey(err error) string {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		redacted := *ue
+		redacted.URL = redactURL(ue.URL)
+		return redacted.Error()
+	}
+	return err.Error()
+}
+
+func redactURL(raw string) string {
+	u, parseErr := url.Parse(raw)
+	if parseErr != nil {
+		return "[redacted url]"
+	}
+	q := u.Query()
+	if q.Has("serviceKey") {
+		q.Set("serviceKey", "REDACTED")
+		u.RawQuery = q.Encode()
+	}
+	return u.String()
 }
 
 func isTimeoutErr(err error) bool {

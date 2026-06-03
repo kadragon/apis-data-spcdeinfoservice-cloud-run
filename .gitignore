@@ -13,3 +13,5 @@
 
 # Tool configs (machine-local)
 .antigravitycli/
+.claude/
+cache/

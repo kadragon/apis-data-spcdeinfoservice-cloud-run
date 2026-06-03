@@ -22,7 +22,12 @@ func main() {
 		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.LevelKey {
 				a.Key = "severity"
-				a.Value = slog.StringValue(strings.ToUpper(a.Value.String()))
+				// GCP Cloud Logging expects "WARNING"; slog emits "WARN".
+				sev := strings.ToUpper(a.Value.String())
+				if sev == "WARN" {
+					sev = "WARNING"
+				}
+				a.Value = slog.StringValue(sev)
 			}
 			return a
 		},

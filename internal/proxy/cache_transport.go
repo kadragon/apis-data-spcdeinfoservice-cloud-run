@@ -80,7 +80,9 @@ func (c *CachingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 		c.cache.Set(key, cached, c.ttl)
 		// Note: data.go.kr may return HTTP 200 with an error body (e.g. resultCode != "00").
 		// This proxy does not inspect response bodies, so such errors are cached for the full TTL.
-		slog.Debug("cache stored", "key", key, "ttl", c.ttl.String())
+		// Emitted at Info so the default JSON handler keeps it; runbook directs
+		// operators to monitor cache-store log lines for cached error bodies.
+		slog.Info("cache stored", "key", key, "ttl", c.ttl.String())
 
 		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func stubFactory(HandlerParams) gin.HandlerFunc {
+func stubFactory(_ HandlerParams) gin.HandlerFunc {
 	return func(c *gin.Context) { c.Status(http.StatusOK) }
 }
 

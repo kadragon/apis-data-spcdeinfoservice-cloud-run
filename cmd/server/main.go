@@ -83,8 +83,10 @@ func main() {
 		stop()
 		slog.Info("shutting down gracefully")
 	case err := <-serveErr:
-		// Surface the listen failure through the main goroutine so defers and
-		// the signal handler unwind cleanly instead of os.Exit-ing mid-stack.
+		// ListenAndServe failed to bind; release the signal handler, log, and
+		// exit non-zero. Serving never began, so there is nothing to gracefully
+		// shut down — exit directly rather than running the shutdown path.
+		stop()
 		slog.Error("listen failed", "err", err)
 		os.Exit(1)
 	}

@@ -70,17 +70,26 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
+	serveErr := make(chan error, 1)
 	go func() {
 		slog.Info("server starting", "port", port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("listen failed", "err", err)
-			os.Exit(1)
+			serveErr <- err
 		}
 	}()
 
-	<-ctx.Done()
-	stop()
-	slog.Info("shutting down gracefully")
+	select {
+	case <-ctx.Done():
+		stop()
+		slog.Info("shutting down gracefully")
+	case err := <-serveErr:
+		// ListenAndServe failed to bind; release the signal handler, log, and
+		// exit non-zero. Serving never began, so there is nothing to gracefully
+		// shut down — exit directly rather than running the shutdown path.
+		stop()
+		slog.Error("listen failed", "err", err)
+		os.Exit(1)
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := srv.Shutdown(shutdownCtx); err != nil {

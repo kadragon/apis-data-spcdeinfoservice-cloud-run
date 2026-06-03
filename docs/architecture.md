@@ -57,7 +57,7 @@ Request → gin router → CORSMiddleware (sets CORS headers; OPTIONS → 204 ab
 ## Key Abstractions
 
 1. **`ServiceSpec`** — declarative config for one upstream API: `MountPath`, `BaseURL`, `AllowedPaths`. Adding a new API = one new file with one `ServiceSpec`.
-2. **`HandlerFactory`** — `func(baseURL, path, serviceKey string) gin.HandlerFunc`. Passed to `RegisterAll`; `main.go` closes over the HTTP client. Swap the factory to change handler strategy (caching, rate-limiting) without touching the registry.
+2. **`HandlerFactory`** — `func(HandlerParams) gin.HandlerFunc` where `HandlerParams{BaseURL, Path, ServiceKey}` (named fields prevent silent swaps of same-typed args). Passed to `RegisterAll`; `main.go` closes over the HTTP client. Swap the factory to change handler strategy (caching, rate-limiting) without touching the registry.
 3. **`NewHandler`** — factory returning `gin.HandlerFunc`; takes `(baseURL, upstreamPath, serviceKey string, client *http.Client)`. Stateless — no shared mutable state.
 4. **`NewClient`** — constructs the default `*http.Client` with tuned transport. `main.go` calls this once and closes over it in the factory.
 5. **`fetchWithRetry`** — signature `(ctx, client, req) → (*http.Response, error)`. No `CancelFunc` returned. Timeout is `ResponseHeaderTimeout=10s` on the HTTP transport; body streaming has no deadline.

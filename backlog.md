@@ -11,5 +11,5 @@
 
 ## Someday
 
-- [ ] Add structured logging (slog) to replace `log.Printf`
-- [ ] Add response caching layer for upstream API calls
+- [x] Add structured logging (slog) to replace `log.Printf`
+- [x] Add response caching layer for upstream API calls (done in ec5f2cc)

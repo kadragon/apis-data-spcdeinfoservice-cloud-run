@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +18,22 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey {
+				a.Key = "severity"
+				// GCP Cloud Logging expects "WARNING"; slog emits "WARN".
+				sev := strings.ToUpper(a.Value.String())
+				if sev == "WARN" {
+					sev = "WARNING"
+				}
+				a.Value = slog.StringValue(sev)
+			}
+			return a
+		},
+	}))
+	slog.SetDefault(logger)
+
 	authKey := mustEnv("AUTH_API_KEY")
 	serviceKey := mustEnv("DATAGOKR_SERVICEKEY")
 
@@ -37,8 +54,8 @@ func main() {
 	r.Use(proxy.AuthMiddleware(authKey))
 
 	client := proxy.NewClient()
-	services.RegisterAll(r, serviceKey, func(baseURL, path, svcKey string) gin.HandlerFunc {
-		return proxy.NewHandler(baseURL, path, svcKey, client)
+	services.RegisterAll(r, serviceKey, func(p services.HandlerParams) gin.HandlerFunc {
+		return proxy.NewHandler(p.BaseURL, p.Path, p.ServiceKey, client)
 	})
 
 	r.NoRoute(func(c *gin.Context) {
@@ -54,20 +71,22 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Proxy server running on port %s", port)
+		slog.Info("server starting", "port", port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen: %v", err)
+			slog.Error("listen failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-ctx.Done()
 	stop()
-	log.Println("Shutting down gracefully...")
+	slog.Info("shutting down gracefully")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		cancel()
-		log.Fatalf("forced shutdown: %v", err)
+		slog.Error("forced shutdown", "err", err)
+		os.Exit(1)
 	}
 	cancel()
 }
@@ -75,7 +94,8 @@ func main() {
 func mustEnv(k string) string {
 	v := os.Getenv(k)
 	if v == "" {
-		log.Fatalf("FATAL: missing required env var %s", k)
+		slog.Error("missing required env var", "name", k)
+		os.Exit(1)
 	}
 	return v
 }

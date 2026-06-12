@@ -30,7 +30,7 @@ steps:
       - "--set-secrets"
       - "DATAGOKR_SERVICEKEY=DATAGOKR_SERVICEKEY:latest,AUTH_API_KEY=AUTH_API_KEY:latest"
       - "--memory"
-      - "256Mi"
+      - "128Mi"
       - "--cpu"
       - "1"
       - "--concurrency"

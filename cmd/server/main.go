@@ -58,9 +58,7 @@ func main() {
 		return proxy.NewHandler(p.BaseURL, p.Path, p.ServiceKey, client)
 	})
 
-	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found"})
-	})
+	r.NoRoute(proxy.NewCatchAllHandler("https://apis.data.go.kr", serviceKey, client))
 
 	srv := &http.Server{
 		Addr:              ":" + port,

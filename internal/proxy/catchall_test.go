@@ -150,6 +150,28 @@ func TestCatchAll_RejectsSingleSegmentPath(t *testing.T) {
 	}
 }
 
+// data.go.kr paths are plain ASCII; percent-encoded segments decode to
+// characters outside the whitelist and are rejected rather than forwarded.
+func TestCatchAll_RejectsEncodedSpecialChars(t *testing.T) {
+	var calls atomic.Int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	r := newCatchAllEngine(upstream)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, catchAllRequest("GET", "/1360000/Some%20Service/op"))
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("want 404 for encoded special char path, got %d", rec.Code)
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("upstream must not be called: got %d calls", calls.Load())
+	}
+}
+
 func TestCatchAll_NonGETMethodNotAllowed(t *testing.T) {
 	var calls atomic.Int32
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

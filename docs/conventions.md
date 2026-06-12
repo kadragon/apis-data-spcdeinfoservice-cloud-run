@@ -2,6 +2,10 @@
 
 ## Adding a New Proxied API
 
+No code change needed by default — the catch-all `NoRoute` handler proxies any
+`apis.data.go.kr` path verbatim. Create a `ServiceSpec` only when a short alias
+route is wanted:
+
 1. Create `internal/services/<name>.go` — one file, one var:
    ```go
    var MyServiceSpec = services.ServiceSpec{

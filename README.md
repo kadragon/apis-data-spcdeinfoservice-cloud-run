@@ -4,6 +4,17 @@ API proxy server that forwards requests to Korean public data APIs ([data.go.kr]
 
 ## Proxy Routes
 
+**Catch-all:** any unmatched `GET /<agency>/<service...>/<operation>` path is forwarded
+verbatim to `https://apis.data.go.kr/<same path>` with the service key injected. APIs not
+registered to the key return data.go.kr's own error payload unchanged. Example:
+
+```bash
+curl -H "x-api-key: YOUR_API_KEY" \
+  "http://localhost:3000/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?pageNo=1"
+```
+
+**Short aliases** (kept for backward compatibility):
+
 | Route | Description | Upstream API |
 |---|---|---|
 | `/SpcdeInfoService` | Korean special day info (holidays, anniversaries, 24 divisions) | `B090041/openapi/service/SpcdeInfoService` |
@@ -43,6 +54,9 @@ curl -H "x-api-key: YOUR_API_KEY" \
 ```
 
 ## Adding a New Proxied API
+
+No code change needed — the catch-all route proxies any `apis.data.go.kr` path.
+To add a short alias instead:
 
 1. Create `internal/services/<name>.go` with a `var <Name>Spec = ServiceSpec{...}`.
 2. Add the spec to the `all` slice in `internal/services/registry.go`.

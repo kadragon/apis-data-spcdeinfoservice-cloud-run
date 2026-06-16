@@ -17,7 +17,7 @@ func NewCatchAllHandler(baseURL, serviceKey string, client *http.Client) gin.Han
 	if client == nil {
 		panic("NewCatchAllHandler: client must not be nil")
 	}
-	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimRight(baseURL, "/")
 	return func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet {
 			c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{

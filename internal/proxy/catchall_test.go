@@ -258,6 +258,9 @@ func TestCatchAll_Upstream5xxRetriesThen502(t *testing.T) {
 	if calls.Load() != int32(MaxRetries+1) {
 		t.Fatalf("want %d upstream calls (1 + %d retries), got %d", MaxRetries+1, MaxRetries, calls.Load())
 	}
+	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatal("missing CORS header on 502 response")
+	}
 }
 
 func TestCatchAll_SetsCORSHeaderOnSuccess(t *testing.T) {

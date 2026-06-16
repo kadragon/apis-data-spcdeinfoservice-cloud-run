@@ -207,3 +207,78 @@ func TestCatchAll_HealthRemainsOpen(t *testing.T) {
 		t.Fatalf("/health must not require auth: got %d", rec.Code)
 	}
 }
+
+func TestCatchAll_OverwritesCallerServiceKey(t *testing.T) {
+	var gotURL string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotURL = r.URL.String()
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("<ok/>"))
+	}))
+	defer upstream.Close()
+
+	r := newCatchAllEngine(upstream)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, catchAllRequest("GET", "/1360000/SomeService/getThing?serviceKey=ATTACKER"))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+	if strings.Contains(gotURL, "ATTACKER") {
+		t.Fatalf("caller serviceKey must not reach upstream: %s", gotURL)
+	}
+	if !strings.Contains(gotURL, "serviceKey=test-svc-key") {
+		t.Fatalf("injected serviceKey missing from upstream URL: %s", gotURL)
+	}
+	if strings.Count(gotURL, "serviceKey=") != 1 {
+		t.Fatalf("serviceKey must appear exactly once in upstream URL: %s", gotURL)
+	}
+}
+
+func TestCatchAll_Upstream5xxRetriesThen502(t *testing.T) {
+	orig := BackoffBaseMs
+	BackoffBaseMs = 1
+	defer func() { BackoffBaseMs = orig }()
+
+	var calls atomic.Int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer upstream.Close()
+
+	r := newCatchAllEngine(upstream)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, catchAllRequest("GET", "/1360000/SomeService/getThing"))
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("want 502 after all retries, got %d", rec.Code)
+	}
+	if calls.Load() != int32(MaxRetries+1) {
+		t.Fatalf("want %d upstream calls (1 + %d retries), got %d", MaxRetries+1, MaxRetries, calls.Load())
+	}
+	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatal("missing CORS header on 502 response")
+	}
+}
+
+func TestCatchAll_SetsCORSHeaderOnSuccess(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("<ok/>"))
+	}))
+	defer upstream.Close()
+
+	r := newCatchAllEngine(upstream)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, catchAllRequest("GET", "/1360000/SomeService/getThing"))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatalf("want Access-Control-Allow-Origin: *, got %q", rec.Header().Get("Access-Control-Allow-Origin"))
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +17,7 @@ func NewCatchAllHandler(baseURL, serviceKey string, client *http.Client) gin.Han
 	if client == nil {
 		panic("NewCatchAllHandler: client must not be nil")
 	}
+	baseURL = strings.TrimSuffix(baseURL, "/")
 	return func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet {
 			c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{
@@ -29,7 +31,10 @@ func NewCatchAllHandler(baseURL, serviceKey string, client *http.Client) gin.Han
 		// path.Clean equality rejects "." / ".." segments the regexp's
 		// character class would otherwise admit.
 		if !catchAllPathRe.MatchString(p) || path.Clean(p) != p {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Not Found"})
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"error":   "Not Found",
+				"message": "Path not allowed",
+			})
 			return
 		}
 

@@ -197,6 +197,41 @@ func TestHandler_ContextCanceledDuringRetry_Returns499(t *testing.T) {
 	}
 }
 
+func TestHandler_ContextCanceledDuringFinalRetryDo_Returns499(t *testing.T) {
+	old := BackoffBaseMs
+	BackoffBaseMs = 0
+	t.Cleanup(func() { BackoffBaseMs = old })
+
+	var callCount atomic.Int32
+	secondCallStarted := make(chan struct{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := callCount.Add(1)
+		if n == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		close(secondCallStarted)
+		<-r.Context().Done()
+	}))
+	defer upstream.Close()
+
+	r := newHandlerEngine(upstream)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequestWithContext(ctx, "GET", "/svc/getThing", nil)
+	rec := httptest.NewRecorder()
+
+	go func() {
+		<-secondCallStarted
+		cancel()
+	}()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != StatusClientClosedRequest {
+		t.Fatalf("want 499 on cancel during final retry client.Do, got %d", rec.Code)
+	}
+}
+
 func TestProxyTarget_RequestBuildFailureLogsRedacted(t *testing.T) {
 	var buf bytes.Buffer
 	prev := slog.Default()

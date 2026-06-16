@@ -14,10 +14,12 @@ FAILED=0
 # Ensure gin.Default() or gin.Logger() (which leak path parameters including service keys) are not used
 echo "Checking for sensitive key leak in logs..."
 if grep -rnE '(log|slog)\.(Print|Fatal|Panic|Info|Warn|Error|Debug)[a-zA-Z]*\(.*([sS]erviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ \
-     | grep -qvE 'scrub[A-Za-z]*Key\s*\(|redact[A-Za-z]+\s*\('; then
+     | perl -pe 's/\b(?:scrub[A-Za-z]*Key|redact[A-Za-z]+)\s*\([^)]*\)//g' \
+     | grep -qE '([sS]erviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY)'; then
   echo "❌ Error: Code contains direct logging of sensitive keys."
   grep -rnE '(log|slog)\.(Print|Fatal|Panic|Info|Warn|Error|Debug)[a-zA-Z]*\(.*([sS]erviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY).*\)' cmd/ internal/ \
-    | grep -vE 'scrub[A-Za-z]*Key\s*\(|redact[A-Za-z]+\s*\(' || true
+    | perl -pe 's/\b(?:scrub[A-Za-z]*Key|redact[A-Za-z]+)\s*\([^)]*\)//g' \
+    | grep -E '([sS]erviceKey|authKey|DATAGOKR_SERVICEKEY|AUTH_API_KEY)' || true
   FAILED=1
 fi
 

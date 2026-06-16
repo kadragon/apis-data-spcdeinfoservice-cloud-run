@@ -1,12 +1,16 @@
 package proxy
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -144,6 +148,114 @@ func TestHandler_5xxThenSuccess(t *testing.T) {
 	}
 	if calls.Load() != 2 {
 		t.Fatalf("want 2 upstream calls, got %d", calls.Load())
+	}
+}
+
+func TestHandler_ContextTimeoutDuringRetry_Returns504(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable) // 503 forces a retry + backoff
+	}))
+	defer upstream.Close()
+
+	r := newHandlerEngine(upstream)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req := httptest.NewRequestWithContext(ctx, "GET", "/svc/getThing", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("want 504 on context deadline, got %d", rec.Code)
+	}
+}
+
+func TestHandler_ContextCanceledDuringRetry_Returns499(t *testing.T) {
+	var once sync.Once
+	firstHit := make(chan struct{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		once.Do(func() { close(firstHit) })
+	}))
+	defer upstream.Close()
+
+	r := newHandlerEngine(upstream)
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequestWithContext(ctx, "GET", "/svc/getThing", nil)
+	rec := httptest.NewRecorder()
+
+	go func() {
+		<-firstHit
+		// Let client.Do return so the cancel lands inside the ~1s backoff
+		// window rather than during the in-flight request.
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != StatusClientClosedRequest {
+		t.Fatalf("want 499 on client cancel, got %d", rec.Code)
+	}
+}
+
+func TestHandler_ContextCanceledDuringFinalRetryDo_Returns499(t *testing.T) {
+	old := BackoffBaseMs
+	BackoffBaseMs = 0
+	t.Cleanup(func() { BackoffBaseMs = old })
+
+	var callCount atomic.Int32
+	secondCallStarted := make(chan struct{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := callCount.Add(1)
+		if n == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		close(secondCallStarted)
+		<-r.Context().Done()
+	}))
+	defer upstream.Close()
+
+	r := newHandlerEngine(upstream)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequestWithContext(ctx, "GET", "/svc/getThing", nil)
+	rec := httptest.NewRecorder()
+
+	go func() {
+		<-secondCallStarted
+		cancel()
+	}()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != StatusClientClosedRequest {
+		t.Fatalf("want 499 on cancel during final retry client.Do, got %d", rec.Code)
+	}
+}
+
+func TestProxyTarget_RequestBuildFailureLogsRedacted(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelError})))
+	defer slog.SetDefault(prev)
+
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequestWithContext(context.Background(), "GET", "/svc/getThing", nil)
+
+	// An ASCII control char makes http.NewRequestWithContext fail to parse.
+	badTarget := "http://example.com/path\x7f?serviceKey=SECRET123"
+	proxyTarget(c, handlerTestClient, badTarget)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("want 500, got %d", rec.Code)
+	}
+	logOut := buf.String()
+	if logOut == "" {
+		t.Fatal("expected an error log on request build failure")
+	}
+	if strings.Contains(logOut, "SECRET123") {
+		t.Fatalf("serviceKey leaked into log: %s", logOut)
 	}
 }
 

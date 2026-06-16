@@ -11,10 +11,10 @@ import (
 	"time"
 )
 
-const (
-	MaxRetries    = 1
-	BackoffBaseMs = 1000
-)
+const MaxRetries = 1
+
+// BackoffBaseMs is a var so tests can override it without timing flakiness.
+var BackoffBaseMs = 1000
 
 type UpstreamError struct {
 	Message    string
@@ -37,6 +37,9 @@ func fetchWithRetry(parent context.Context, client *http.Client, baseReq *http.R
 		resp, err := client.Do(req)
 		switch {
 		case err != nil:
+			if parent.Err() != nil {
+				return nil, parent.Err()
+			}
 			isTimeout := isTimeoutErr(err)
 			msg := scrubServiceKey(err)
 			if isTimeout {

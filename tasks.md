@@ -18,11 +18,11 @@
 
 ### PR #51 — Catch-all proxy for any data.go.kr API + Cloud Run cost trim (2026-06-12)
 
-- [ ] [debt] Add `message` field to catch-all path-validation 404 for response-shape consistency with other error JSON (source: pr-review-toolkit:review-pr) — internal/proxy/catchall.go:32
+- [x] [debt] Add `message` field to catch-all path-validation 404 for response-shape consistency with other error JSON (source: pr-review-toolkit:review-pr) — internal/proxy/catchall.go:32 *(resolved in PR #53)*
 - [x] [debt] Exempt `context.DeadlineExceeded` from pipe-error warn in `proxyTarget` io.Copy guard (pre-existing, relocated by refactor) (source: pr-review-toolkit:review-pr) — internal/proxy/handler.go:114 *(resolved in PR #52)*
 - [x] [debt] Log (with `redactURL`) when `http.NewRequestWithContext` fails before returning 500 (pre-existing) (source: pr-review-toolkit:review-pr) — internal/proxy/handler.go:73 *(resolved in PR #52)*
 - [x] [debt] Early-return on raw `context.Canceled`/`DeadlineExceeded` from `fetchWithRetry` backoff instead of generic silent 502 (pre-existing) (source: pr-review-toolkit:review-pr) — internal/proxy/handler.go:82 *(resolved in PR #52)*
-- [ ] [constraint] Test that caller-supplied `?serviceKey=` is overwritten (guards Golden Principle 1 against `q.Set`→`q.Add` regression) (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go
-- [ ] [constraint] Test upstream 5xx→502 with retry through catch-all wiring (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go
-- [ ] [constraint] Assert CORS header in catch-all success test for parity with handler_test.go (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go
-- [ ] [debt] `strings.TrimSuffix(baseURL, "/")` guard in `NewCatchAllHandler` against double-slash target URLs (source: agy) — internal/proxy/catchall.go:38
+- [x] [constraint] Test that caller-supplied `?serviceKey=` is overwritten (guards Golden Principle 1 against `q.Set`→`q.Add` regression) (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go *(resolved in PR #53)*
+- [x] [constraint] Test upstream 5xx→502 with retry through catch-all wiring (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go *(resolved in PR #53)*
+- [x] [constraint] Assert CORS header in catch-all success test for parity with handler_test.go (source: pr-review-toolkit:review-pr) — internal/proxy/catchall_test.go *(resolved in PR #53)*
+- [x] [debt] `strings.TrimSuffix(baseURL, "/")` guard in `NewCatchAllHandler` against double-slash target URLs (source: agy) — internal/proxy/catchall.go:38 *(resolved in PR #53)*

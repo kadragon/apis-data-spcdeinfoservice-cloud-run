@@ -14,6 +14,10 @@ import (
 	"github.com/kadragon/apis-data-spcdeinfoservice-cloud-run/internal/cache"
 )
 
+// StatusClientClosedRequest mirrors nginx's 499: the client went away before
+// the upstream response was ready, so any response body we write is moot.
+const StatusClientClosedRequest = 499
+
 // HeaderTimeout bounds time to receive response headers per attempt.
 // Body streaming is not subject to this deadline. Var so tests can override.
 var HeaderTimeout = 10 * time.Second
@@ -71,6 +75,7 @@ func NewHandler(baseURL, upstreamPath, serviceKey string, client *http.Client) g
 func proxyTarget(c *gin.Context, client *http.Client, target string) {
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, target, nil)
 	if err != nil {
+		slog.Error("build upstream request", "err", scrubServiceKey(err), "target", redactURL(target))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
 			"message": "Failed to build upstream request",
@@ -81,6 +86,22 @@ func proxyTarget(c *gin.Context, client *http.Client, target string) {
 
 	resp, err := fetchWithRetry(c.Request.Context(), client, req)
 	if err != nil {
+		// fetchWithRetry returns the raw context error when the parent context
+		// ends during backoff. Map those explicitly instead of a generic 502.
+		if errors.Is(err, context.Canceled) {
+			c.AbortWithStatusJSON(StatusClientClosedRequest, gin.H{
+				"error":   "Client Closed Request",
+				"message": "Request canceled by client",
+			})
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			c.AbortWithStatusJSON(http.StatusGatewayTimeout, gin.H{
+				"error":   "Gateway Timeout",
+				"message": "Request timed out",
+			})
+			return
+		}
 		var ue *UpstreamError
 		if errors.As(err, &ue) {
 			errTitle := "Bad Gateway"
@@ -111,7 +132,8 @@ func proxyTarget(c *gin.Context, client *http.Client, target string) {
 	c.Header("Content-Type", ct)
 	c.Status(resp.StatusCode)
 
-	if _, err := io.Copy(c.Writer, resp.Body); err != nil && !errors.Is(err, context.Canceled) {
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil &&
+		!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Warn("pipe error", "err", err)
 	}
 }

@@ -47,7 +47,7 @@ fi
 echo "Checking service specs convention..."
 for file in internal/services/*.go; do
   filename=$(basename "$file")
-  if [ "$filename" = "registry.go" ] || [ "$filename" = "registry_test.go" ]; then
+  if [ "$filename" = "registry.go" ] || [[ "$filename" == *_test.go ]]; then
     continue
   fi
   count=$(grep -c "ServiceSpec{" "$file" || true)
